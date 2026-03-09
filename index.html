@@ -571,8 +571,8 @@ body.is-pc .toast-dot{display:none}
 <!-- LOADER -->
 <div id="loader">
   <div>
-    <div class="lb-brand">STAR INFLUENCER <em>PR</em></div>
-    <div class="lb-sub">テンポス インフルエンサー案件掲示板</div>
+    <div class="lb-brand">INFLUENCER <em>PR</em></div>
+    <div class="lb-sub">インフルエンサー × PR案件マッチング</div>
     <div class="lb-bar"><div class="lb-fill"></div></div>
   </div>
 </div>
@@ -581,8 +581,8 @@ body.is-pc .toast-dot{display:none}
 <div id="auth-page">
   <div class="auth-wrap">
     <div class="auth-brand">
-      <div class="auth-logo">STAR INFLUENCER <em>PR</em></div>
-      <div class="auth-tagline">テンポス インフルエンサー案件掲示板</div>
+      <div class="auth-logo">INFLUENCER <em>PR</em></div>
+      <div class="auth-tagline">インフルエンサー × PR案件マッチング</div>
     </div>
     <div class="auth-box">
       <div class="atabs">
@@ -628,6 +628,18 @@ body.is-pc .toast-dot{display:none}
           <div>
             <label class="fl" for="r-url">URL</label>
             <input id="r-url" class="fi" type="url" inputmode="url" placeholder="https://...">
+          </div>
+        </div>
+        <div class="fg" style="margin-top:.2rem">
+          <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:var(--rs);padding:1rem 1rem .9rem;">
+            <p style="font-size:.78rem;color:rgba(255,255,255,.55);line-height:1.75;margin-bottom:.85rem;">
+              本Webアプリに含まれる情報は、契約上の機密情報に該当します。<br>
+              利用者は、本アプリを通じて知り得た情報を、当社の事前の許可なく第三者へ開示、共有、転載、または利用しないものとします。上記内容に同意のうえ、本アプリをご利用ください。
+            </p>
+            <label style="display:flex;align-items:center;gap:.6rem;cursor:pointer;min-height:44px;">
+              <input id="r-agree" type="checkbox" style="width:18px;height:18px;accent-color:var(--rose);cursor:pointer;flex-shrink:0;">
+              <span style="font-size:.85rem;color:rgba(255,255,255,.75);font-weight:500;">同意する</span>
+            </label>
           </div>
         </div>
         <button class="btn-a" id="btn-reg" onclick="doRegister()">アカウントを作成</button>
@@ -961,7 +973,7 @@ function doLogin() {
     else showErr('login', (r && r.message) || 'ログインに失敗しました');
     dis('btn-login', false, 'ログイン');
   }).catch(function() {
-    showErr('login', 'エラーが発生しました。時間を空けて再ログインしてください。');
+    showErr('login', 'エラーが発生しました。GAS URLの設定を確認してください。');
     dis('btn-login', false, 'ログイン');
   });
 }
@@ -971,6 +983,7 @@ function doRegister() {
   var user  = gv('r-user'),  ig   = gv('r-ig');
   var fw    = gv('r-fw'),    url  = gv('r-url');
   if (!email || !pass || !user)  { showErr('reg','必須項目（*）を入力してください'); return; }
+  if (!$('r-agree').checked)     { showErr('reg','利用規約に同意してください'); return; }
   if (!cEmail(email))            { showErr('reg','メールアドレスの形式が正しくありません'); return; }
   if (pass.length < 8)           { showErr('reg','パスワードは8文字以上で入力してください'); return; }
   if (!user.startsWith('@'))     { showErr('reg','ユーザー名は@から始めてください'); return; }
@@ -978,7 +991,7 @@ function doRegister() {
   dis('btn-reg', true, '登録中…');
   sha256hex(pass + 'PR_PLATFORM_SALT_2024').then(function(hashedPass) {
     return gas('registerUser', cSan(email,254), hashedPass,
-      cSan(user,50), cSan(ig,100), Number(fw)||0, cSan(url,500));
+      cSan(user,50), cSan(ig,100), Number(fw)||0, cSan(url,500), true);
   }).then(function(r) {
     if (r && r.success) { saveSession(r.token, r.user); enterApp(); }
     else showErr('reg', (r && r.message) || '登録に失敗しました');
