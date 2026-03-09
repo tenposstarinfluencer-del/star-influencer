@@ -823,7 +823,7 @@ body.is-pc .toast-dot{display:none}
 //  → 「次のユーザーとして実行: 自分」「アクセスできるユーザー: 全員」
 //  → デプロイ → 表示されたURLをコピーしてここに貼る
 // ============================================================
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbwpxEwZB6lVsYeeskx3OwP4VLazmcGui10UKsUdDi5Qstzwcjq2qFY4Z1lg0bj_FC1D/exec';
+var GAS_URL = 'https://script.google.com/macros/s/【ここにデプロイID】/exec';
 
 // ============================================================
 //  GAS APIブリッジ（fetch版）
@@ -1203,11 +1203,21 @@ function loadApps() {
 // 日付文字列（YYYY-MM-DD）と時刻（HH:MM）を「○月○日 ○○:○○」に変換
 function fmtDateTime(date, time) {
   if (!date) return '';
-  var parts = date.split('-');
-  if (parts.length < 3) return xe(date) + (time ? ' ' + xe(time) : '');
-  var m = parseInt(parts[1], 10);
-  var d = parseInt(parts[2], 10);
-  var result = m + '月' + d + '日';
+  var y, mo, d;
+  // スプレッドシートからDate.toString()形式（"Fri Mar 27 2026..."）で来る場合も対応
+  var parsed = new Date(date);
+  if (!isNaN(parsed.getTime())) {
+    y  = parsed.getFullYear();
+    mo = parsed.getMonth() + 1;
+    d  = parsed.getDate();
+  } else {
+    var parts = String(date).split('-');
+    if (parts.length < 3) return xe(date) + (time ? '　' + xe(time) : '');
+    y  = parseInt(parts[0], 10);
+    mo = parseInt(parts[1], 10);
+    d  = parseInt(parts[2], 10);
+  }
+  var result = y + '年' + mo + '月' + d + '日';
   if (time) result += '　' + xe(time);
   return result;
 }
