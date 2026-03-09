@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<title>PR案件プラットフォーム</title>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ===== RESET ===== */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --ink:#1A1A1A;--ink2:#4A4A4A;--ink3:#8A8A8A;
+  --paper:#F9F6F2;--paper2:#FFFFFF;
+  --border:#E5DFD8;--border2:#D0C8BF;
+  --rose:#C8614A;--rose-light:#F2E0DB;--rose-dark:#A04E3B;
+  --gold:#B8923A;--gold-pale:#FAF5EB;
+  --sage:#6B8F71;--sage-light:#E0EDE2;
+  --shadow:0 4px 16px rgba(26,26,26,.09);
+  --shadow-lg:0 12px 40px rgba(26,26,26,.14);
+  --r:14px;--rs:10px
+}
+html{height:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{
+  font-family:'DM Sans',sans-serif;background:var(--paper);
+  color:var(--ink);line-height:1.6;min-height:100%;overflow-x:hidden
+}
+
+/* ===== LOADER ===== */
+#loader{
+  position:fixed;inset:0;background:var(--ink);
+  display:flex;align-items:center;justify-content:center;z-index:9999;
+  transition:opacity .5s ease
+}
+.lb-brand{
+  font-family:'Shippori Mincho',serif;font-size:1.5rem;
+  letter-spacing:.4em;color:#fff;text-align:center
+}
+.lb-brand em{color:var(--rose);font-style:normal}
+.lb-sub{font-size:.7rem;letter-spacing:.2em;color:rgba(255,255,255,.3);
+  margin-top:.5rem;text-align:center}
+.lb-bar{width:100px;height:2px;background:rgba(255,255,255,.1);
+  border-radius:2px;margin:1.4rem auto 0;overflow:hidden}
+.lb-fill{height:100%;width:0;background:var(--rose);
+  animation:fillBar 1.2s ease forwards .2s}
+@keyframes fillBar{to{width:100%}}
+
+/* ===== AUTH ===== */
+#auth-page{
+  min-height:100vh;background:var(--ink);
+  display:flex;align-items:center;justify-content:center;
+  padding:1rem
+}
+#auth-page.hidden{display:none}
+.auth-wrap{width:100%;max-width:440px;margin:0 auto;animation:fadeUp .4s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.auth-brand{text-align:center;margin-bottom:2rem}
+.auth-logo{
+  font-family:'Shippori Mincho',serif;font-size:1.75rem;
+  font-weight:700;letter-spacing:.3em;color:#fff
+}
+.auth-logo em{color:var(--rose);font-style:normal}
+.auth-tagline{font-size:.7rem;letter-spacing:.18em;color:rgba(255,255,255,.28);margin-top:.4rem}
+.auth-box{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);
+  border-radius:var(--r);padding:1.8rem 1.4rem;
+  box-shadow:var(--shadow-lg)
+}
+.atabs{display:flex;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:1.6rem}
+.atab{
+  flex:1;padding:12px 0;text-align:center;background:none;border:none;
+  cursor:pointer;font-family:'DM Sans',sans-serif;font-size:1rem;
+  color:rgba(255,255,255,.35);border-bottom:2px solid transparent;
+  margin-bottom:-1px;transition:all .2s;min-height:48px
+}
+.atab.on{color:var(--rose);border-bottom-color:var(--rose)}
+.fg{margin-bottom:1rem}
+.fl{display:block;font-size:.8rem;letter-spacing:.06em;color:rgba(255,255,255,.4);margin-bottom:.4rem}
+.fi{
+  width:100%;background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.12);border-radius:var(--rs);
+  padding:14px;color:#fff;font-family:'DM Sans',sans-serif;font-size:16px;
+  outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none
+}
+.fi:focus{border-color:rgba(200,97,74,.6)}
+.fi::placeholder{color:rgba(255,255,255,.2)}
+.fi2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.btn-a{
+  width:100%;margin-top:.5rem;background:var(--rose);border:none;
+  border-radius:var(--rs);padding:16px;color:#fff;
+  font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:600;
+  letter-spacing:.06em;cursor:pointer;transition:background .2s;
+  min-height:52px;touch-action:manipulation;-webkit-appearance:none
+}
+.btn-a:active{background:var(--rose-dark)}
+.btn-a:disabled{opacity:.5;cursor:not-allowed}
+.aerr{
+  margin-top:.75rem;padding:12px 14px;border-radius:var(--rs);
+  font-size:.85rem;line-height:1.5;background:rgba(200,97,74,.14);
+  color:#f0a898;border:1px solid rgba(200,97,74,.22);display:none
+}
+.aerr.on{display:block}
+
+/* ===== HEADER ===== */
+#hdr{
+  background:var(--ink);position:sticky;top:0;z-index:200;
+  box-shadow:0 1px 0 rgba(255,255,255,.07);display:none
+}
+#hdr.show{display:block}
+.hi{
+  max-width:1280px;margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  height:56px;padding:0 1rem
+}
+.hlogo{
+  font-family:'Shippori Mincho',serif;font-size:.95rem;
+  letter-spacing:.22em;color:#fff;cursor:pointer;
+  border:none;background:none;padding:8px 0;
+  display:flex;align-items:center;min-height:44px
+}
+.hlogo em{color:var(--rose);font-style:normal}
+.pc-nav{display:none;align-items:center;gap:.15rem}
+body.is-pc .pc-nav{display:flex}
+.hnb{
+  background:none;border:none;cursor:pointer;
+  font-family:'DM Sans',sans-serif;font-size:.83rem;
+  color:rgba(255,255,255,.45);letter-spacing:.05em;
+  padding:8px 12px;border-radius:20px;transition:all .2s;min-height:44px
+}
+.hnb:hover,.hnb.on{color:var(--rose);background:rgba(200,97,74,.12)}
+.huserbtn{
+  font-size:.76rem;color:rgba(255,255,255,.35);
+  padding:6px 12px;border:1px solid rgba(255,255,255,.1);
+  border-radius:20px;cursor:pointer;background:none;min-height:44px;
+  letter-spacing:.04em;transition:all .2s
+}
+.huserbtn:hover{border-color:rgba(255,255,255,.25);color:rgba(255,255,255,.6)}
+.hout{
+  background:none;border:none;cursor:pointer;
+  font-family:'DM Sans',sans-serif;font-size:.75rem;
+  color:rgba(255,255,255,.22);padding:8px;
+  letter-spacing:.05em;transition:color .2s;min-height:44px
+}
+.hout:hover{color:rgba(255,255,255,.5)}
+.sp-hdr-right{display:flex;align-items:center;gap:.2rem}
+body.is-pc .sp-hdr-right{display:none}
+
+/* ===== BOTTOM NAV（スマホのみ）===== */
+#bottom-nav{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--ink);border-top:1px solid rgba(255,255,255,.09);
+  z-index:150;
+  padding-bottom:env(safe-area-inset-bottom, 0px)
+}
+body.is-sp #bottom-nav.show{display:flex}
+.bnav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:4px;
+  padding:10px 4px;background:none;border:none;cursor:pointer;
+  font-family:'DM Sans',sans-serif;font-size:.65rem;
+  color:rgba(255,255,255,.38);letter-spacing:.05em;
+  transition:color .2s;min-height:58px;touch-action:manipulation
+}
+.bnav-item svg{
+  width:24px;height:24px;stroke:rgba(255,255,255,.38);
+  transition:stroke .2s;flex-shrink:0
+}
+.bnav-item.on{color:var(--rose)}
+.bnav-item.on svg{stroke:var(--rose)}
+
+/* ===== PAGES ===== */
+.pg{display:none}
+.pg.on{display:block}
+.wrap{max-width:1280px;margin:0 auto;padding:1.4rem 1rem 6rem}
+body.is-pc .wrap{padding:2rem 1.4rem 2rem}
+
+/* ===== TITLE ROW ===== */
+.prow{
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:.5rem;margin-bottom:1.3rem
+}
+.ptitle{
+  font-family:'Shippori Mincho',serif;
+  font-size:1.35rem;font-weight:600;letter-spacing:.06em
+}
+.pcount{font-size:.8rem;color:var(--ink3)}
+
+/* ===== FILTER BAR ===== */
+.fbar{
+  display:flex;gap:.4rem;align-items:center;
+  margin-bottom:1.3rem;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+  padding-bottom:2px;scrollbar-width:none
+}
+.fbar::-webkit-scrollbar{display:none}
+.ftag{
+  background:var(--paper2);border:1px solid var(--border);
+  border-radius:20px;padding:9px 16px;white-space:nowrap;
+  font-family:'DM Sans',sans-serif;font-size:.82rem;
+  color:var(--ink3);cursor:pointer;flex-shrink:0;
+  min-height:40px;touch-action:manipulation;transition:all .15s
+}
+.ftag:active{transform:scale(.95)}
+.ftag.on{background:var(--rose);border-color:var(--rose);color:#fff}
+.fsrch-wrap{position:relative;flex-shrink:0}
+.fsrch-ico{
+  position:absolute;left:11px;top:50%;transform:translateY(-50%);
+  width:14px;height:14px;stroke:var(--ink3);pointer-events:none
+}
+.fsrch{
+  border:1px solid var(--border);border-radius:20px;
+  padding:9px 14px 9px 30px;
+  font-family:'DM Sans',sans-serif;font-size:16px;
+  background:var(--paper2);color:var(--ink);
+  outline:none;transition:border-color .2s;
+  width:150px;-webkit-appearance:none;appearance:none
+}
+.fsrch:focus{border-color:var(--rose)}
+body.is-pc .fsrch{width:210px}
+
+/* ===== GRID ===== */
+.grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:.9rem
+}
+body.is-pc .grid{
+  grid-template-columns:repeat(auto-fill,minmax(290px,1fr));
+  gap:1.1rem
+}
+
+/* ===== CARD ===== */
+.card{
+  background:var(--paper2);border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;
+  animation:cIn .3s ease both
+}
+@keyframes cIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+body.is-pc .card{transition:transform .22s,box-shadow .22s,border-color .22s}
+body.is-pc .card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:var(--border2)}
+.card:active{opacity:.95}
+.card-inner{display:flex;flex-direction:column}
+body.is-sp .card-inner{flex-direction:row}
+.cimg-w{
+  position:relative;overflow:hidden;background:var(--gold-pale);
+  flex-shrink:0
+}
+body.is-pc .cimg-w{height:155px;width:100%}
+body.is-sp .cimg-w{width:110px;height:auto;min-height:110px}
+.cimg{width:100%;height:100%;object-fit:cover;display:block}
+body.is-sp .cimg{position:absolute;inset:0}
+.cph{
+  width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#f0e8de,#e0d6ca);font-size:2rem;color:var(--border2);
+  min-height:110px
+}
+body.is-pc .cph{font-size:2.5rem;min-height:155px}
+.closed-ov{
+  position:absolute;inset:0;background:rgba(26,26,26,.68);
+  display:flex;align-items:center;justify-content:center
+}
+.closed-txt{
+  font-family:'Shippori Mincho',serif;font-size:.78rem;letter-spacing:.2em;color:#fff;
+  border:1px solid rgba(255,255,255,.45);padding:.25rem .65rem;border-radius:4px
+}
+.badge-reward{
+  position:absolute;bottom:.4rem;right:.4rem;
+  background:rgba(26,26,26,.92);color:var(--gold);
+  font-size:.65rem;font-weight:700;letter-spacing:.04em;
+  padding:3px 8px;border-radius:10px;border:1px solid rgba(184,146,58,.3)
+}
+.badge-applied{
+  position:absolute;top:.4rem;left:.4rem;
+  background:var(--sage);color:#fff;
+  font-size:.62rem;font-weight:700;letter-spacing:.06em;
+  padding:3px 8px;border-radius:10px
+}
+.card-right{flex:1;min-width:0;display:flex;flex-direction:column}
+.chd{padding:.75rem .9rem .6rem;border-bottom:1px solid var(--border)}
+body.is-sp .chd{padding:.65rem .75rem .5rem}
+.ctag{font-size:.65rem;letter-spacing:.1em;color:var(--rose);font-weight:500;margin-bottom:.15rem}
+.cname{
+  font-family:'Shippori Mincho',serif;
+  font-size:.98rem;font-weight:600;letter-spacing:.03em;line-height:1.35
+}
+body.is-sp .cname{font-size:.9rem}
+.cloc{display:flex;align-items:center;gap:.3rem;margin-top:.22rem;flex-wrap:wrap}
+.cloc-t{font-size:.72rem;color:var(--ink3)}
+.cloc-a{
+  display:inline-flex;align-items:center;gap:3px;
+  font-size:.67rem;color:var(--rose);text-decoration:none;
+  border:1px solid var(--rose-light);border-radius:10px;
+  padding:2px 8px;transition:background .2s;min-height:26px;
+  touch-action:manipulation
+}
+.cloc-a:active{background:var(--rose);color:#fff;border-color:var(--rose)}
+.cloc-a svg{width:9px;height:9px}
+.cbd{padding:.65rem .9rem;flex:1}
+body.is-sp .cbd{padding:.55rem .75rem}
+.chips{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.55rem}
+.chip{
+  display:inline-flex;align-items:center;gap:3px;
+  background:var(--paper);border:1px solid var(--border);
+  border-radius:6px;padding:3px 8px;font-size:.7rem;color:var(--ink2)
+}
+.chip svg{width:10px;height:10px;opacity:.5;flex-shrink:0}
+.cmenu{
+  background:var(--gold-pale);border-left:3px solid var(--gold);
+  border-radius:0 6px 6px 0;padding:.5rem .75rem;margin-bottom:.5rem
+}
+.cmenu-l{font-size:.65rem;color:var(--gold);letter-spacing:.1em;font-weight:700;margin-bottom:2px}
+.cmenu-t{font-size:.8rem;line-height:1.5}
+.cng{
+  font-size:.7rem;color:#b84040;
+  background:#fdf0f0;border-left:2px solid #e88080;
+  border-radius:0 5px 5px 0;padding:4px 8px
+}
+.cng b{margin-right:3px}
+.cft{
+  padding:.6rem .9rem;border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:.4rem
+}
+body.is-sp .cft{padding:.55rem .75rem}
+.comp{font-size:.7rem;padding:3px 9px;border-radius:10px;letter-spacing:.03em}
+.comp-ok{background:var(--sage-light);color:var(--sage);border:1px solid rgba(107,143,113,.22)}
+.comp-ng{background:var(--rose-light);color:var(--rose);border:1px solid rgba(200,97,74,.18)}
+.btn-ap{
+  background:var(--rose);border:none;border-radius:var(--rs);
+  padding:10px 16px;color:#fff;
+  font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;
+  letter-spacing:.05em;cursor:pointer;flex-shrink:0;
+  min-height:42px;touch-action:manipulation;transition:background .15s
+}
+.btn-ap:active{background:var(--rose-dark)}
+.btn-ap:disabled{background:var(--border);color:var(--ink3);cursor:not-allowed}
+
+/* ===== EMPTY STATE ===== */
+.empty{text-align:center;padding:4rem 1.5rem;color:var(--ink3)}
+.empty-i{font-size:2.6rem;margin-bottom:.8rem}
+.empty-t{font-family:'Shippori Mincho',serif;font-size:1.05rem;margin-bottom:.3rem;color:var(--ink2)}
+.empty-s{font-size:.84rem}
+
+/* ===== MODAL ===== */
+.mov{
+  position:fixed;inset:0;background:rgba(26,26,26,.78);
+  z-index:500;display:none;align-items:flex-end;justify-content:center
+}
+.mov.on{display:flex}
+.modal{
+  background:var(--paper2);border-radius:18px 18px 0 0;
+  width:100%;max-height:90vh;overflow-y:auto;
+  box-shadow:var(--shadow-lg);
+  animation:sheetUp .28s cubic-bezier(.32,1,.36,1);
+  padding-bottom:env(safe-area-inset-bottom, 12px)
+}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+body.is-pc .mov{align-items:center;padding:1rem}
+body.is-pc .modal{
+  border-radius:var(--r);width:min(530px,100%);
+  animation:mIn .26s cubic-bezier(.34,1.56,.64,1)
+}
+@keyframes mIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+.modal-handle{
+  width:38px;height:4px;background:var(--border2);
+  border-radius:2px;margin:10px auto 0
+}
+body.is-pc .modal-handle{display:none}
+.mhd{
+  background:var(--ink);padding:1.1rem 1.3rem;
+  display:flex;align-items:center;justify-content:space-between
+}
+body.is-pc .mhd{border-radius:var(--r) var(--r) 0 0}
+.mhd-t{font-family:'Shippori Mincho',serif;font-size:.97rem;letter-spacing:.1em;color:#fff}
+.mcls{
+  background:none;border:none;cursor:pointer;
+  color:rgba(255,255,255,.4);font-size:1.5rem;line-height:1;
+  min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:flex-end;
+  touch-action:manipulation
+}
+.mcls:active{color:#fff}
+.mbd{padding:1.2rem 1.1rem}
+.mst{font-family:'Shippori Mincho',serif;font-size:1.08rem;margin-bottom:.2rem}
+.msb{font-size:.82rem;color:var(--ink3);margin-bottom:1.2rem}
+.mds{
+  background:var(--paper);border:1px solid var(--border);
+  border-radius:var(--rs);padding:.9rem;margin-bottom:1.1rem
+}
+.mds-t{font-size:.74rem;font-weight:700;letter-spacing:.1em;color:var(--rose);margin-bottom:.7rem}
+.mdr{display:grid;grid-template-columns:1fr;gap:.55rem;margin-bottom:.75rem}
+body.is-pc .mdr{grid-template-columns:1fr 1fr}
+.mdr:last-child{margin-bottom:0}
+.mdl{font-size:.72rem;color:var(--ink3);margin-bottom:.28rem;display:flex;align-items:center;gap:3px}
+.mdn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:16px;height:16px;border-radius:50%;
+  background:var(--rose);color:#fff;font-size:.62rem;font-weight:700;flex-shrink:0
+}
+.mi{
+  width:100%;border:1px solid var(--border);border-radius:var(--rs);
+  padding:13px 12px;font-family:'DM Sans',sans-serif;font-size:16px;
+  color:var(--ink);outline:none;background:var(--paper2);transition:border-color .2s;
+  -webkit-appearance:none;appearance:none
+}
+.mi:focus{border-color:var(--rose)}
+.mlbl{font-size:.78rem;font-weight:600;letter-spacing:.07em;color:var(--ink2);margin-bottom:.38rem}
+.mta{
+  width:100%;border:1px solid var(--border);border-radius:var(--rs);
+  padding:13px 12px;font-family:'DM Sans',sans-serif;font-size:16px;
+  color:var(--ink);resize:vertical;min-height:90px;outline:none;
+  transition:border-color .2s;-webkit-appearance:none
+}
+.mta:focus{border-color:var(--rose)}
+.mft{
+  padding:.9rem 1.1rem;border-top:1px solid var(--border);
+  display:flex;gap:.6rem;justify-content:flex-end
+}
+.btn-c{
+  background:none;border:1px solid var(--border);border-radius:var(--rs);
+  padding:12px 20px;font-family:'DM Sans',sans-serif;font-size:.88rem;
+  color:var(--ink3);cursor:pointer;min-height:48px;touch-action:manipulation
+}
+.btn-s{
+  background:var(--rose);border:none;border-radius:var(--rs);
+  padding:12px 26px;color:#fff;font-family:'DM Sans',sans-serif;
+  font-size:.88rem;font-weight:600;letter-spacing:.05em;cursor:pointer;
+  min-height:48px;touch-action:manipulation;transition:background .15s
+}
+.btn-s:active{background:var(--rose-dark)}
+.btn-s:disabled{opacity:.5;cursor:not-allowed}
+
+/* ===== APPLICATIONS ===== */
+.alist{display:flex;flex-direction:column;gap:.85rem}
+.ai{
+  background:var(--paper2);border:1px solid var(--border);
+  border-radius:var(--r);padding:1rem 1.1rem;
+  display:flex;gap:1rem;align-items:flex-start;
+  animation:cIn .3s ease both
+}
+.ast{
+  flex-shrink:0;width:64px;height:64px;border-radius:9px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;font-size:.62rem;font-weight:700;letter-spacing:.04em;text-align:center
+}
+.s0{background:var(--gold-pale);color:var(--gold);border:1px solid rgba(184,146,58,.28)}
+.s1{background:var(--sage-light);color:var(--sage);border:1px solid rgba(107,143,113,.28)}
+.s2{background:var(--rose-light);color:var(--rose);border:1px solid rgba(200,97,74,.22)}
+.ain{flex:1;min-width:0}
+.aist{font-family:'Shippori Mincho',serif;font-size:.95rem;margin-bottom:.2rem;line-height:1.4}
+.amet{font-size:.72rem;color:var(--ink3);display:flex;flex-wrap:wrap;gap:.4rem .65rem;margin-bottom:.3rem}
+.adts{
+  font-size:.72rem;color:var(--ink2);
+  background:var(--paper);border:1px solid var(--border);
+  border-radius:6px;padding:.3rem .65rem;margin-top:.3rem;
+  display:flex;flex-wrap:wrap;gap:.3rem .8rem
+}
+.adts b{color:var(--rose);font-size:.64rem;letter-spacing:.05em}
+.amsg{font-size:.75rem;color:var(--ink3);font-style:italic;margin-top:.3rem;line-height:1.5}
+
+/* ===== PROFILE GRID ===== */
+.pgrid{display:grid;grid-template-columns:1fr;gap:.75rem}
+body.is-pc .pgrid{grid-template-columns:1fr 1fr}
+
+/* ===== CASE DETAIL BUTTON ===== */
+.btn-detail{
+  display:inline-flex;align-items:center;gap:4px;
+  background:none;border:1px solid var(--border2);border-radius:var(--rs);
+  padding:7px 13px;font-family:'DM Sans',sans-serif;font-size:.75rem;
+  color:var(--ink2);cursor:pointer;margin-top:.55rem;
+  transition:all .15s;touch-action:manipulation;min-height:36px
+}
+.btn-detail:active,.btn-detail:hover{
+  background:var(--rose);border-color:var(--rose);color:#fff
+}
+.btn-detail svg{width:12px;height:12px;flex-shrink:0}
+
+/* ===== CASE DETAIL MODAL ===== */
+.cd-img{
+  width:100%;height:180px;object-fit:cover;display:block;
+  background:var(--gold-pale)
+}
+body.is-pc .cd-img{height:220px}
+.cd-ph{
+  width:100%;height:180px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#f0e8de,#e0d6ca);font-size:3rem;color:var(--border2)
+}
+.cd-sec{margin-bottom:1rem}
+.cd-sec-t{
+  font-size:.66rem;letter-spacing:.14em;font-weight:700;
+  color:var(--rose);text-transform:uppercase;margin-bottom:.35rem
+}
+.cd-row{
+  display:flex;align-items:flex-start;gap:.5rem;
+  font-size:.83rem;color:var(--ink2);line-height:1.55;padding:.28rem 0;
+  border-bottom:1px solid var(--border)
+}
+.cd-row:last-child{border-bottom:none}
+.cd-lbl{
+  font-size:.7rem;color:var(--ink3);white-space:nowrap;
+  min-width:72px;padding-top:.15rem
+}
+.cd-val{flex:1}
+.cd-reward{
+  display:inline-flex;align-items:center;gap:.4rem;
+  background:var(--gold-pale);border:1px solid rgba(184,146,58,.3);
+  border-radius:8px;padding:.5rem 1rem;
+  font-family:'Shippori Mincho',serif;font-size:1.2rem;
+  font-weight:700;color:var(--gold);margin-bottom:1rem
+}
+.cd-menu{
+  background:var(--gold-pale);border-left:3px solid var(--gold);
+  border-radius:0 6px 6px 0;padding:.65rem .9rem;margin-bottom:.9rem
+}
+.cd-menu-l{font-size:.65rem;color:var(--gold);letter-spacing:.1em;font-weight:700;margin-bottom:3px}
+.cd-menu-t{font-size:.84rem;line-height:1.55;color:var(--ink2)}
+.cd-ng{
+  font-size:.78rem;color:#b84040;
+  background:#fdf0f0;border-left:2px solid #e88080;
+  border-radius:0 5px 5px 0;padding:.5rem .8rem
+}
+.cd-chip-row{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.75rem}
+.cd-chip{
+  display:inline-flex;align-items:center;gap:4px;
+  background:var(--paper);border:1px solid var(--border);
+  border-radius:6px;padding:4px 10px;font-size:.75rem;color:var(--ink2)
+}
+.cd-ig-link{
+  display:inline-flex;align-items:center;gap:4px;
+  color:var(--rose);text-decoration:none;font-size:.82rem;
+  border-bottom:1px solid rgba(200,97,74,.28)
+}
+
+/* ===== DIVIDER ===== */
+.sec-div{
+  display:flex;align-items:center;gap:.75rem;
+  margin:1.4rem 0 1rem;color:var(--ink3);font-size:.75rem
+}
+.sec-div::before,.sec-div::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ===== TOAST ===== */
+#toast{
+  position:fixed;z-index:1000;
+  display:flex;align-items:center;gap:.5rem;
+  left:50%;bottom:76px;
+  transform:translateX(-50%) translateY(100px);
+  opacity:0;
+  background:rgba(26,26,26,.95);color:#fff;
+  padding:11px 20px;border-radius:24px;font-size:.85rem;
+  box-shadow:0 4px 24px rgba(0,0,0,.3);
+  white-space:nowrap;max-width:88vw;
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1), opacity .3s ease;
+  pointer-events:none
+}
+#toast.on{transform:translateX(-50%) translateY(0);opacity:1}
+.toast-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+#toast.ok .toast-dot{background:var(--sage)}
+#toast.err .toast-dot{background:var(--rose)}
+body.is-pc #toast{
+  left:auto;right:1.6rem;bottom:1.6rem;
+  transform:translateX(120%);opacity:1;
+  border-radius:9px;border-left:4px solid var(--rose)
+}
+body.is-pc #toast.on{transform:translateX(0)}
+body.is-pc #toast.ok{border-left-color:var(--sage)}
+body.is-pc #toast.err{border-left-color:var(--rose)}
+body.is-pc .toast-dot{display:none}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div>
+    <div class="lb-brand">INFLUENCER <em>PR</em></div>
+    <div class="lb-sub">インフルエンサー × PR案件マッチング</div>
+    <div class="lb-bar"><div class="lb-fill"></div></div>
+  </div>
+</div>
+
+<!-- AUTH -->
+<div id="auth-page">
+  <div class="auth-wrap">
+    <div class="auth-brand">
+      <div class="auth-logo">INFLUENCER <em>PR</em></div>
+      <div class="auth-tagline">インフルエンサー × PR案件マッチング</div>
+    </div>
+    <div class="auth-box">
+      <div class="atabs">
+        <button class="atab on" id="tab-login" onclick="switchTab('login')">ログイン</button>
+        <button class="atab" id="tab-reg" onclick="switchTab('reg')">新規登録</button>
+      </div>
+      <!-- ログイン -->
+      <div id="f-login">
+        <div class="fg">
+          <label class="fl" for="l-email">メールアドレス</label>
+          <input id="l-email" class="fi" type="email" autocomplete="email" inputmode="email" placeholder="your@email.com">
+        </div>
+        <div class="fg">
+          <label class="fl" for="l-pass">パスワード</label>
+          <input id="l-pass" class="fi" type="password" autocomplete="current-password" placeholder="••••••••">
+        </div>
+        <button class="btn-a" id="btn-login" onclick="doLogin()">ログイン</button>
+        <div id="err-login" class="aerr" role="alert"></div>
+      </div>
+      <!-- 新規登録 -->
+      <div id="f-reg" style="display:none">
+        <div class="fg">
+          <label class="fl" for="r-email">メールアドレス *</label>
+          <input id="r-email" class="fi" type="email" autocomplete="email" inputmode="email" placeholder="your@email.com">
+        </div>
+        <div class="fg">
+          <label class="fl" for="r-pass">パスワード（8文字以上）*</label>
+          <input id="r-pass" class="fi" type="password" autocomplete="new-password" placeholder="••••••••">
+        </div>
+        <div class="fg">
+          <label class="fl" for="r-user">ユーザー名（@から始まる）*</label>
+          <input id="r-user" class="fi" type="text" autocomplete="username" placeholder="@yourname">
+        </div>
+        <div class="fg">
+          <label class="fl" for="r-ig">Instagramアカウント名</label>
+          <input id="r-ig" class="fi" type="text" autocomplete="off" placeholder="yourinstagram">
+        </div>
+        <div class="fi2 fg">
+          <div>
+            <label class="fl" for="r-fw">フォロワー数</label>
+            <input id="r-fw" class="fi" type="number" min="0" inputmode="numeric" placeholder="10000">
+          </div>
+          <div>
+            <label class="fl" for="r-url">URL</label>
+            <input id="r-url" class="fi" type="url" inputmode="url" placeholder="https://...">
+          </div>
+        </div>
+        <button class="btn-a" id="btn-reg" onclick="doRegister()">アカウントを作成</button>
+        <div id="err-reg" class="aerr" role="alert"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header id="hdr">
+  <div class="hi">
+    <button class="hlogo" onclick="goPage('cases')">INFLUENCER <em>PR</em></button>
+    <nav class="pc-nav">
+      <button class="hnb on" id="nb-cases" onclick="goPage('cases')">案件一覧</button>
+      <button class="hnb" id="nb-apps" onclick="goPage('apps')">応募状況</button>
+      <button class="huserbtn" onclick="openProfile()">👤 <span id="uname"></span></button>
+      <button class="hout" onclick="doLogout()">ログアウト</button>
+    </nav>
+    <div class="sp-hdr-right">
+      <button class="huserbtn" onclick="openProfile()">👤 <span id="uname-sp"></span></button>
+    </div>
+  </div>
+</header>
+
+<!-- 案件ページ -->
+<div id="pg-cases" class="pg">
+  <div class="wrap">
+    <div class="prow">
+      <h1 class="ptitle">PR案件一覧</h1>
+      <span class="pcount" id="pcnt"></span>
+    </div>
+    <div class="fbar">
+      <button class="ftag on" onclick="setF('all',this)">すべて</button>
+      <button class="ftag" onclick="setF('open',this)">公開中</button>
+      <button class="ftag" onclick="setF('new',this)">未応募</button>
+      <button class="ftag" onclick="setF('done',this)">応募済み</button>
+      <div class="fsrch-wrap">
+        <svg class="fsrch-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="fsrch" id="fsrch" type="search" placeholder="店舗名・エリア…" oninput="render()">
+      </div>
+    </div>
+    <div class="grid" id="cgrid">
+      <div class="empty"><div class="empty-i">⏳</div><div class="empty-t">読み込み中…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 応募状況ページ -->
+<div id="pg-apps" class="pg">
+  <div class="wrap">
+    <div class="prow"><h1 class="ptitle">応募状況</h1></div>
+    <div class="alist" id="alist">
+      <div class="empty"><div class="empty-i">⏳</div><div class="empty-t">読み込み中…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ボトムナビ（スマホ専用） -->
+<nav id="bottom-nav">
+  <button class="bnav-item on" id="bn-cases" onclick="goPage('cases')">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+      <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+      <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+      <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+      <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+    </svg>
+    案件一覧
+  </button>
+  <button class="bnav-item" id="bn-apps" onclick="goPage('apps')">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="9" y1="13" x2="15" y2="13"/>
+      <line x1="9" y1="17" x2="15" y2="17"/>
+    </svg>
+    応募状況
+  </button>
+  <button class="bnav-item" id="bn-prof" onclick="openProfile()">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+      <circle cx="12" cy="7" r="4"/>
+    </svg>
+    プロフィール
+  </button>
+</nav>
+
+<!-- 応募モーダル -->
+<div class="mov" id="mod-apply">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="mhd">
+      <span class="mhd-t">案件に応募する</span>
+      <button class="mcls" onclick="closeMod('mod-apply')" aria-label="閉じる">×</button>
+    </div>
+    <div class="mbd">
+      <div class="mst" id="m-store"></div>
+      <div class="msb" id="m-loc"></div>
+      <div class="mds">
+        <div class="mds-t">📅 来店日程候補（最大2つ）</div>
+        <div class="mdr">
+          <div>
+            <div class="mdl"><span class="mdn">1</span>第1希望 — 日付</div>
+            <input class="mi" id="m-d1" type="date">
+          </div>
+          <div>
+            <div class="mdl"><span class="mdn">1</span>第1希望 — 時間</div>
+            <input class="mi" id="m-t1" type="time">
+          </div>
+        </div>
+        <div class="mdr">
+          <div>
+            <div class="mdl"><span class="mdn">2</span>第2希望 — 日付</div>
+            <input class="mi" id="m-d2" type="date">
+          </div>
+          <div>
+            <div class="mdl"><span class="mdn">2</span>第2希望 — 時間</div>
+            <input class="mi" id="m-t2" type="time">
+          </div>
+        </div>
+      </div>
+      <div class="mlbl">メッセージ（任意）</div>
+      <textarea class="mta" id="m-msg" placeholder="自己PR・フォロワー数・過去実績など、アピールしたいことをご記入ください。"></textarea>
+    </div>
+    <div class="mft">
+      <button class="btn-c" onclick="closeMod('mod-apply')">キャンセル</button>
+      <button class="btn-s" id="btn-apply" onclick="doApply()">応募する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 案件詳細モーダル -->
+<div class="mov" id="mod-case-detail">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="mhd">
+      <span class="mhd-t">案件詳細</span>
+      <button class="mcls" onclick="closeMod('mod-case-detail')" aria-label="閉じる">×</button>
+    </div>
+    <div id="cd-body"></div>
+  </div>
+</div>
+
+<!-- プロフィールモーダル -->
+<div class="mov" id="mod-prof">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="mhd">
+      <span class="mhd-t">プロフィール編集</span>
+      <button class="mcls" onclick="closeMod('mod-prof')" aria-label="閉じる">×</button>
+    </div>
+    <div class="mbd">
+      <div style="margin-bottom:1rem;padding-bottom:.9rem;border-bottom:1px solid var(--border)">
+        <div style="font-size:.72rem;color:var(--ink3);margin-bottom:.18rem">メールアドレス</div>
+        <div id="p-email" style="font-size:.9rem"></div>
+      </div>
+      <div class="pgrid">
+        <div class="fg">
+          <label class="fl" style="color:var(--ink3)" for="p-user">ユーザー名（@始まり）</label>
+          <input id="p-user" class="mi" type="text" autocomplete="username" placeholder="@yourname">
+        </div>
+        <div class="fg">
+          <label class="fl" style="color:var(--ink3)" for="p-ig">Instagramアカウント名</label>
+          <input id="p-ig" class="mi" type="text" autocomplete="off" placeholder="yourinstagram">
+        </div>
+        <div class="fg">
+          <label class="fl" style="color:var(--ink3)" for="p-fw">フォロワー数</label>
+          <input id="p-fw" class="mi" type="number" min="0" inputmode="numeric">
+        </div>
+        <div class="fg">
+          <label class="fl" style="color:var(--ink3)" for="p-url">URL</label>
+          <input id="p-url" class="mi" type="url" inputmode="url" placeholder="https://...">
+        </div>
+      </div>
+      <div class="sec-div">ログアウト</div>
+      <button onclick="doLogout()" style="width:100%;padding:14px;background:none;border:1px solid var(--border);border-radius:var(--rs);font-family:'DM Sans',sans-serif;font-size:.9rem;color:var(--ink3);cursor:pointer;min-height:50px;touch-action:manipulation;">
+        ログアウトする
+      </button>
+    </div>
+    <div class="mft">
+      <button class="btn-c" onclick="closeMod('mod-prof')">キャンセル</button>
+      <button class="btn-s" id="btn-save" onclick="doSaveProf()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"><span class="toast-dot"></span><span id="toast-msg"></span></div>
+
+<script>
+// ============================================================
+//  ★★★ここを自分のGAS WebアプリURLに書き換えてください★★★
+//  GASエディタ → デプロイ → 新しいデプロイ → ウェブアプリ
+//  → 「次のユーザーとして実行: 自分」「アクセスできるユーザー: 全員」
+//  → デプロイ → 表示されたURLをコピーしてここに貼る
+// ============================================================
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbwpxEwZB6lVsYeeskx3OwP4VLazmcGui10UKsUdDi5Qstzwcjq2qFY4Z1lg0bj_FC1D/exec';
+
+// ============================================================
+//  GAS APIブリッジ（fetch版）
+//  google.script.run の代替
+// ============================================================
+function gas(action) {
+  var params = Array.prototype.slice.call(arguments, 1);
+  return fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' }, // GASはapplication/jsonだとpreflightが発生するためtext/plainを使用
+    body: JSON.stringify({ action: action, params: params })
+  }).then(function(res) {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  });
+}
+
+// セッション期限切れチェック付きラッパー
+function gasAuth(action) {
+  var args = Array.prototype.slice.call(arguments);
+  return gas.apply(null, args).then(function(r) {
+    if (r && (r.error === 'SESSION_EXPIRED' || r.message === 'SESSION_EXPIRED')) {
+      handleSessionExpired();
+      return Promise.reject('SESSION_EXPIRED');
+    }
+    return r;
+  });
+}
+
+// ============================================================
+//  デバイス判定
+// ============================================================
+var IS_SP = false;
+function detectDevice() {
+  IS_SP = window.innerWidth <= 640;
+  var b = document.body;
+  if (IS_SP) { b.classList.add('is-sp'); b.classList.remove('is-pc'); }
+  else        { b.classList.add('is-pc'); b.classList.remove('is-sp'); }
+}
+detectDevice();
+window.addEventListener('resize', function() {
+  detectDevice();
+  if (IS_SP && U) $('bottom-nav').classList.add('show');
+  else            $('bottom-nav').classList.remove('show');
+});
+
+// ============================================================
+//  STATE
+// ============================================================
+var U       = null;
+var TOKEN   = null;
+var CASES   = [];
+var APPLIED = [];
+var FILTER  = 'all';
+var PENDING = null;
+
+// ============================================================
+//  クライアント側バリデーション
+// ============================================================
+function cSan(s, max) {
+  if (!s) return '';
+  return String(s).replace(/<[^>]*>/g,'').replace(/[<>"'`]/g,'').trim().substring(0, max||500);
+}
+function cEmail(e) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && e.length <= 254;
+}
+
+// ============================================================
+//  SHA-256ハッシュ（SubtleCrypto）
+// ============================================================
+function sha256hex(str) {
+  var enc = new TextEncoder().encode(str);
+  return crypto.subtle.digest('SHA-256', enc).then(function(buf) {
+    return Array.from(new Uint8Array(buf))
+      .map(function(b){ return ('0'+b.toString(16)).slice(-2); }).join('');
+  });
+}
+
+// ============================================================
+//  セッション管理
+// ============================================================
+function saveSession(token, user) {
+  TOKEN = token;
+  U     = user;
+  try { sessionStorage.setItem('_pru_name', user.username || user.email); } catch(e){}
+}
+function clearSession() {
+  TOKEN = null; U = null;
+  try { sessionStorage.removeItem('_pru_name'); } catch(e){}
+}
+function handleSessionExpired() {
+  clearSession();
+  CASES = []; APPLIED = [];
+  closeMod('mod-apply'); closeMod('mod-prof'); closeMod('mod-case-detail');
+  $('hdr').classList.remove('show');
+  $('bottom-nav').classList.remove('show');
+  $('pg-cases').classList.remove('on');
+  $('pg-apps').classList.remove('on');
+  $('auth-page').classList.remove('hidden');
+  window.scrollTo(0,0);
+  showToast('セッションの有効期限が切れました。再ログインしてください。','err');
+}
+
+// ============================================================
+//  初期化
+// ============================================================
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    var l = $('loader');
+    l.style.opacity = '0';
+    setTimeout(function(){ l.style.display = 'none'; }, 500);
+  }, 1400);
+});
+
+// ============================================================
+//  AUTH
+// ============================================================
+function switchTab(t) {
+  $('tab-login').classList.toggle('on', t==='login');
+  $('tab-reg').classList.toggle('on',   t==='reg');
+  $('f-login').style.display = t==='login' ? 'block' : 'none';
+  $('f-reg').style.display   = t==='reg'   ? 'block' : 'none';
+}
+
+function doLogin() {
+  var email = gv('l-email'), pass = $('l-pass').value;
+  if (!email || !pass)   { showErr('login','メールとパスワードを入力してください'); return; }
+  if (!cEmail(email))    { showErr('login','メールアドレスの形式が正しくありません'); return; }
+  if (pass.length < 8)   { showErr('login','パスワードは8文字以上です'); return; }
+  dis('btn-login', true, '認証中…');
+  sha256hex(pass + 'PR_PLATFORM_SALT_2024').then(function(hashedPass) {
+    return gas('loginUser', cSan(email,254), hashedPass);
+  }).then(function(r) {
+    if (r && r.success) { saveSession(r.token, r.user); enterApp(); }
+    else showErr('login', (r && r.message) || 'ログインに失敗しました');
+    dis('btn-login', false, 'ログイン');
+  }).catch(function() {
+    showErr('login', 'エラーが発生しました。GAS URLの設定を確認してください。');
+    dis('btn-login', false, 'ログイン');
+  });
+}
+
+function doRegister() {
+  var email = gv('r-email'), pass = $('r-pass').value;
+  var user  = gv('r-user'),  ig   = gv('r-ig');
+  var fw    = gv('r-fw'),    url  = gv('r-url');
+  if (!email || !pass || !user)  { showErr('reg','必須項目（*）を入力してください'); return; }
+  if (!cEmail(email))            { showErr('reg','メールアドレスの形式が正しくありません'); return; }
+  if (pass.length < 8)           { showErr('reg','パスワードは8文字以上で入力してください'); return; }
+  if (!user.startsWith('@'))     { showErr('reg','ユーザー名は@から始めてください'); return; }
+  if (url && !/^https?:\/\//.test(url)) { showErr('reg','URLはhttps://から始めてください'); return; }
+  dis('btn-reg', true, '登録中…');
+  sha256hex(pass + 'PR_PLATFORM_SALT_2024').then(function(hashedPass) {
+    return gas('registerUser', cSan(email,254), hashedPass,
+      cSan(user,50), cSan(ig,100), Number(fw)||0, cSan(url,500));
+  }).then(function(r) {
+    if (r && r.success) { saveSession(r.token, r.user); enterApp(); }
+    else showErr('reg', (r && r.message) || '登録に失敗しました');
+    dis('btn-reg', false, 'アカウントを作成');
+  }).catch(function() {
+    showErr('reg', 'エラーが発生しました。再度お試しください。');
+    dis('btn-reg', false, 'アカウントを作成');
+  });
+}
+
+function doLogout() {
+  if (TOKEN) gas('logoutUser', TOKEN).catch(function(){});
+  clearSession(); CASES = []; APPLIED = [];
+  closeMod('mod-prof');
+  $('hdr').classList.remove('show');
+  $('bottom-nav').classList.remove('show');
+  $('pg-cases').classList.remove('on');
+  $('pg-apps').classList.remove('on');
+  $('auth-page').classList.remove('hidden');
+  window.scrollTo(0,0);
+}
+
+// ============================================================
+//  APP ENTRY
+// ============================================================
+function enterApp() {
+  $('auth-page').classList.add('hidden');
+  $('hdr').classList.add('show');
+  var name = (U && U.username) ? U.username : (U && U.email ? U.email : '');
+  $('uname').textContent    = name;
+  $('uname-sp').textContent = name;
+  if (IS_SP) $('bottom-nav').classList.add('show');
+  goPage('cases');
+}
+
+// ============================================================
+//  PAGE SWITCH
+// ============================================================
+function goPage(p) {
+  $('pg-cases').classList.remove('on');
+  $('pg-apps').classList.remove('on');
+  ['nb-cases','nb-apps','bn-cases','bn-apps','bn-prof'].forEach(function(id){
+    var el = $(id); if (el) el.classList.remove('on');
+  });
+  if (p === 'cases') {
+    $('pg-cases').classList.add('on');
+    var nc=$('nb-cases'), bc=$('bn-cases');
+    if(nc) nc.classList.add('on');
+    if(bc) bc.classList.add('on');
+    loadCases();
+  } else {
+    $('pg-apps').classList.add('on');
+    var na=$('nb-apps'), ba=$('bn-apps');
+    if(na) na.classList.add('on');
+    if(ba) ba.classList.add('on');
+    loadApps();
+  }
+  window.scrollTo(0,0);
+}
+
+// ============================================================
+//  CASES
+// ============================================================
+function loadCases() {
+  $('cgrid').innerHTML = emptyHTML('⏳','読み込み中…','');
+  gasAuth('getCasesWithApplied', TOKEN)
+  .then(function(r) {
+    CASES   = (r && r.cases)   || [];
+    APPLIED = (r && r.applied) || [];
+    render();
+  }).catch(function(err) {
+    if (err === 'SESSION_EXPIRED') return;
+    $('cgrid').innerHTML = emptyHTML('⚠️','読み込みエラー','ページを再読み込みしてください');
+  });
+}
+
+function render() {
+  var q = gv('fsrch').toLowerCase();
+  var list = CASES.filter(function(c) {
+    if (FILTER==='open') return c.status==='公開中';
+    if (FILTER==='new')  return APPLIED.indexOf(c.id)===-1;
+    if (FILTER==='done') return APPLIED.indexOf(c.id)!==-1;
+    return true;
+  }).filter(function(c) {
+    if (!q) return true;
+    return (c.storeName||'').toLowerCase().indexOf(q)>=0
+      || (c.prefecture||'').toLowerCase().indexOf(q)>=0
+      || (c.city||'').toLowerCase().indexOf(q)>=0;
+  });
+  $('pcnt').textContent = list.length + '件';
+  if (!list.length) {
+    $('cgrid').innerHTML = emptyHTML('🔍','案件が見つかりません','条件を変更してお試しください');
+    return;
+  }
+  $('cgrid').innerHTML = list.map(function(c,i){ return makeCard(c,i); }).join('');
+}
+
+function setF(f, el) {
+  FILTER = f;
+  document.querySelectorAll('.ftag').forEach(function(b){ b.classList.remove('on'); });
+  el.classList.add('on');
+  render();
+}
+
+// ============================================================
+//  CARD HTML
+// ============================================================
+function makeCard(c, i) {
+  var applied = APPLIED.indexOf(c.id)>=0;
+  var closed  = c.status==='締め切り';
+  var delay   = Math.min(i*0.04, 0.24).toFixed(2);
+  var mapQ    = encodeURIComponent([c.storeName,c.prefecture,c.city,c.address].filter(Boolean).join(' '));
+  var mapU    = 'https://www.google.com/maps/search/?api=1&query='+mapQ;
+
+  var imgH = c.imageUrl
+    ? '<img class="cimg" src="'+xe(c.imageUrl)+'" alt="'+xe(c.storeName)+'" loading="lazy"'
+      +' onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
+      +'<div class="cph" style="display:none">🏪</div>'
+    : '<div class="cph">🏪</div>';
+
+  var rwdBadge  = c.reward  ? '<div class="badge-reward">¥'+xe(fmtN(c.reward))+'</div>' : '';
+  var closedOv  = closed    ? '<div class="closed-ov"><div class="closed-txt">締め切りました</div></div>' : '';
+  var appliedBg = applied   ? '<div class="badge-applied">✓ 応募済み</div>' : '';
+  var locTxt    = [c.prefecture,c.city].filter(Boolean).join(' ');
+
+  var locH = '<div class="cloc">'
+    +(locTxt ? '<span class="cloc-t">📍 '+xe(locTxt)+'</span>' : '')
+    +'<a class="cloc-a" href="'+mapU+'" target="_blank" rel="noopener noreferrer">'
+    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">'
+    +'<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>'
+    +'<circle cx="12" cy="9" r="2.5"/></svg>Map</a></div>';
+
+  var comp    = c.companionAllowed||'';
+  var compCls = comp.indexOf('可')>=0 ? 'comp-ok' : 'comp-ng';
+
+  var apBtn;
+  if (closed)       apBtn = '<button class="btn-ap" disabled>締め切り</button>';
+  else if (applied) apBtn = '<button class="btn-ap" disabled>応募済み</button>';
+  else apBtn = '<button class="btn-ap" onclick="openApply(\''+esc(c.id)+'\',\''+esc(c.storeName||'')+'\',\''+esc(locTxt)+'\')">応募する →</button>';
+
+  return '<div class="card" style="animation-delay:'+delay+'s">'
+    +'<div class="card-inner">'
+      +'<div class="cimg-w">'+imgH+closedOv+appliedBg+rwdBadge+'</div>'
+      +'<div class="card-right">'
+        +'<div class="chd">'
+          +(c.title?'<div class="ctag">'+xe(c.title)+'</div>':'')
+          +'<div class="cname">'+xe(c.storeName||'店舗名未設定')+'</div>'
+          +locH
+        +'</div>'
+        +'<div class="cbd">'
+          +'<div class="chips">'
+            +(c.availableDays?'<span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'+xe(c.availableDays)+'</span>':'')
+            +(c.availableTime?'<span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'+xe(c.availableTime)+'</span>':'')
+            +(c.businessHours?'<span class="chip">🕐 '+xe(c.businessHours)+'</span>':'')
+          +'</div>'
+          +(c.prMenu?'<div class="cmenu"><div class="cmenu-l">▶ PRメニュー</div><div class="cmenu-t">'+xe(c.prMenu)+'</div></div>':'')
+          +(c.ngItems?'<div class="cng"><b>⚠ NG：</b>'+xe(c.ngItems)+'</div>':'')
+        +'</div>'
+        +'<div class="cft">'
+          +'<span class="comp '+compCls+'">同伴：'+xe(comp||'—')+'</span>'
+          +apBtn
+        +'</div>'
+      +'</div>'
+    +'</div>'
+    +'</div>';
+}
+
+// ============================================================
+//  APPLY MODAL
+// ============================================================
+function openApply(id, store, loc) {
+  PENDING = id;
+  $('m-store').textContent = store;
+  $('m-loc').textContent   = loc;
+  ['m-d1','m-t1','m-d2','m-t2','m-msg'].forEach(function(i){ $(i).value=''; });
+  var today = new Date().toISOString().split('T')[0];
+  $('m-d1').setAttribute('min', today);
+  $('m-d2').setAttribute('min', today);
+  openMod('mod-apply');
+}
+
+function doApply() {
+  if (!PENDING) return;
+  var d1=gv('m-d1'), t1=gv('m-t1'), d2=gv('m-d2'), t2=gv('m-t2');
+  var msg = $('m-msg').value.substring(0,1000);
+  dis('btn-apply', true, '送信中…');
+  gasAuth('applyCase', TOKEN, PENDING, d1, t1, d2, t2, msg)
+  .then(function(r) {
+    if (r && r.success) {
+      APPLIED.push(PENDING);
+      closeMod('mod-apply');
+      render();
+      showToast('応募が完了しました ✨','ok');
+    } else {
+      showToast((r&&r.message)||'エラーが発生しました','err');
+    }
+    dis('btn-apply', false, '応募する');
+  }).catch(function(err) {
+    if (err !== 'SESSION_EXPIRED') showToast('エラーが発生しました','err');
+    dis('btn-apply', false, '応募する');
+  });
+}
+
+// ============================================================
+//  APPLICATIONS
+// ============================================================
+function loadApps() {
+  $('alist').innerHTML = emptyHTML('⏳','読み込み中…','');
+  gasAuth('getMyApplications', TOKEN)
+  .then(function(apps) {
+    if (!apps||!apps.length) {
+      $('alist').innerHTML = emptyHTML('📋','まだ応募はありません','案件一覧から気になる案件に応募してみましょう！');
+      return;
+    }
+    $('alist').innerHTML = apps.map(function(a,i){ return makeApp(a,i); }).join('');
+  }).catch(function(err) {
+    if (err === 'SESSION_EXPIRED') return;
+    $('alist').innerHTML = emptyHTML('⚠️','読み込みエラー','');
+  });
+}
+
+function makeApp(a, i) {
+  var ico = {'審査中':'⏳','承認':'✅','否認':'❌'}[a.appStatus]||'📄';
+  var cls = {'審査中':'s0','承認':'s1','否認':'s2'}[a.appStatus]||'s0';
+  var d1H = a.date1 ? '<span><b>第1希望</b> '+xe(a.date1)+' '+xe(a.time1||'')+'</span>' : '';
+  var d2H = a.date2 ? '<span><b>第2希望</b> '+xe(a.date2)+' '+xe(a.time2||'')+'</span>' : '';
+  var appJson = esc(JSON.stringify(a));
+  return '<div class="ai" style="animation-delay:'+(i*0.05).toFixed(2)+'s">'
+    +'<div class="ast '+cls+'"><span style="font-size:1.1rem">'+ico+'</span><span>'+xe(a.appStatus)+'</span></div>'
+    +'<div class="ain">'
+      +'<div class="aist">'+xe(a.storeName)+'</div>'
+      +'<div class="amet">'
+        +'<span>📍 '+xe(a.prefecture)+'</span>'
+        +'<span>🗓 '+xe(a.appliedAt)+'</span>'
+        +(a.reward?'<span>💰 ¥'+xe(fmtN(a.reward))+'</span>':'')
+        +(a.prMenu?'<span>✨ '+xe(a.prMenu)+'</span>':'')
+      +'</div>'
+      +((d1H||d2H)?'<div class="adts">'+d1H+d2H+'</div>':'')
+      +(a.message?'<div class="amsg">「'+xe(a.message)+'」</div>':'')
+      +'<button class="btn-detail" onclick="openCaseDetailFromApp(\''+appJson+'\')">'
+        +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+        +'案件詳細を見る'
+      +'</button>'
+    +'</div>'
+    +'</div>';
+}
+
+// ============================================================
+//  CASE DETAIL MODAL
+// ============================================================
+function openCaseDetailFromApp(appJson) {
+  var a;
+  try { a = JSON.parse(appJson); } catch(e) { return; }
+  var c = null;
+  for (var k = 0; k < CASES.length; k++) {
+    if (CASES[k].id === a.caseId) { c = CASES[k]; break; }
+  }
+  var imgH = (c && c.imageUrl)
+    ? '<img class="cd-img" src="'+xe(c.imageUrl)+'" alt="'+xe(a.storeName)+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">'
+      +'<div class="cd-ph" style="display:none">🏪</div>'
+    : '<div class="cd-ph">🏪</div>';
+  var igLink = (c && c.instagramUrl)
+    ? '<a class="cd-ig-link" href="'+xe(c.instagramUrl)+'" target="_blank" rel="noopener">📸 Instagram を見る</a>'
+    : '';
+  var locParts = [];
+  if (c && c.prefecture) locParts.push(xe(c.prefecture));
+  if (c && c.city)       locParts.push(xe(c.city));
+  if (c && c.address)    locParts.push(xe(c.address));
+  var locTxt = locParts.join(' ') || (xe(a.prefecture)||'—');
+
+  var html = imgH
+    +'<div class="mbd">'
+      +(a.title?'<div style="font-size:.65rem;color:var(--rose);letter-spacing:.1em;font-weight:700;margin-bottom:.15rem">'+xe(a.title)+'</div>':'')
+      +'<div style="font-family:\'Shippori Mincho\',serif;font-size:1.15rem;font-weight:700;margin-bottom:.8rem">'+xe(a.storeName||'店舗名未設定')+'</div>'
+      +(a.reward?'<div class="cd-reward">💰 ¥'+xe(fmtN(a.reward))+'</div>':'')
+      +(a.prMenu?'<div class="cd-menu"><div class="cd-menu-l">▶ PRメニュー</div><div class="cd-menu-t">'+xe(a.prMenu)+'</div></div>':'')
+      +'<div class="cd-chip-row">'
+        +((c&&c.availableDays)?'<span class="cd-chip">📅 '+xe(c.availableDays)+'</span>':'')
+        +((c&&c.availableTime)?'<span class="cd-chip">⏰ '+xe(c.availableTime)+'</span>':'')
+        +((c&&c.businessHours)?'<span class="cd-chip">🕐 '+xe(c.businessHours)+'</span>':'')
+        +((c&&c.companionAllowed)?'<span class="cd-chip">👥 同伴：'+xe(c.companionAllowed)+'</span>':'')
+      +'</div>'
+      +'<div class="cd-sec">'
+        +'<div class="cd-sec-t">店舗情報</div>'
+        +'<div class="cd-row"><span class="cd-lbl">📍 住所</span><span class="cd-val">'+locTxt+'</span></div>'
+        +(igLink?'<div class="cd-row"><span class="cd-lbl">Instagram</span><span class="cd-val">'+igLink+'</span></div>':'')
+      +'</div>'
+      +((c&&c.ngItems)?'<div class="cd-ng"><b>⚠ NG事項：</b>'+xe(c.ngItems)+'</div>':'')
+      +'<div class="cd-sec" style="margin-top:.9rem">'
+        +'<div class="cd-sec-t">あなたの応募情報</div>'
+        +'<div class="cd-row"><span class="cd-lbl">応募日時</span><span class="cd-val">'+xe(a.appliedAt)+'</span></div>'
+        +'<div class="cd-row"><span class="cd-lbl">ステータス</span><span class="cd-val">'+xe(a.appStatus)+'</span></div>'
+        +(a.date1?'<div class="cd-row"><span class="cd-lbl">第1希望</span><span class="cd-val">'+xe(a.date1)+' '+xe(a.time1||'')+'</span></div>':'')
+        +(a.date2?'<div class="cd-row"><span class="cd-lbl">第2希望</span><span class="cd-val">'+xe(a.date2)+' '+xe(a.time2||'')+'</span></div>':'')
+        +(a.message?'<div class="cd-row"><span class="cd-lbl">メッセージ</span><span class="cd-val" style="font-style:italic;color:var(--ink3)">'+xe(a.message)+'</span></div>':'')
+      +'</div>'
+    +'</div>'
+    +'<div class="mft">'
+      +'<button class="btn-c" onclick="closeMod(\'mod-case-detail\')">閉じる</button>'
+    +'</div>';
+
+  $('cd-body').innerHTML = html;
+  openMod('mod-case-detail');
+}
+
+// ============================================================
+//  PROFILE
+// ============================================================
+function openProfile() {
+  if (!U) return;
+  $('p-email').textContent = U.email||'';
+  $('p-user').value = U.username||'';
+  $('p-ig').value   = U.igName||'';
+  $('p-fw').value   = U.followers||'';
+  $('p-url').value  = U.url||'';
+  var bp = $('bn-prof'); if (bp) bp.classList.add('on');
+  openMod('mod-prof');
+}
+
+function doSaveProf() {
+  var user=gv('p-user'), ig=gv('p-ig'), fw=gv('p-fw'), url=gv('p-url');
+  if (!user)                        { showToast('ユーザー名を入力してください','err'); return; }
+  if (!user.startsWith('@'))        { showToast('ユーザー名は@から始めてください','err'); return; }
+  if (url && !/^https?:\/\//.test(url)) { showToast('URLはhttps://から始めてください','err'); return; }
+  dis('btn-save', true, '保存中…');
+  gasAuth('updateProfile', TOKEN, cSan(user,50), cSan(ig,100), Number(fw)||0, cSan(url,500))
+  .then(function(r) {
+    if (r && r.success) {
+      U = r.user;
+      var n = U.username||U.email;
+      $('uname').textContent    = n;
+      $('uname-sp').textContent = n;
+      closeMod('mod-prof');
+      showToast('プロフィールを更新しました','ok');
+    } else { showToast((r&&r.message)||'エラー','err'); }
+    dis('btn-save', false, '保存する');
+  }).catch(function(err) {
+    if (err !== 'SESSION_EXPIRED') showToast('エラーが発生しました','err');
+    dis('btn-save', false, '保存する');
+  });
+}
+
+// ============================================================
+//  MODAL
+// ============================================================
+function openMod(id) {
+  $(id).classList.add('on');
+  document.body.style.overflow = 'hidden';
+}
+function closeMod(id) {
+  $(id).classList.remove('on');
+  document.body.style.overflow = '';
+  if (id==='mod-prof') {
+    var bp=$('bn-prof'); if(bp) bp.classList.remove('on');
+  }
+}
+document.querySelectorAll('.mov').forEach(function(el) {
+  el.addEventListener('click', function(e){ if(e.target===el) closeMod(el.id); });
+});
+
+// ============================================================
+//  UTILS
+// ============================================================
+function $(id)  { return document.getElementById(id); }
+function gv(id) { return $(id).value.trim(); }
+function xe(s) {
+  if (s==null) return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+function esc(s) {
+  if (s==null) return '';
+  return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+function fmtN(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+function dis(id,d,t) { var el=$(id); el.disabled=d; el.textContent=t; }
+function emptyHTML(ico, ttl, sub) {
+  return '<div class="empty"><div class="empty-i">'+ico+'</div>'
+    +'<div class="empty-t">'+ttl+'</div>'
+    +(sub?'<div class="empty-s">'+sub+'</div>':'')+'</div>';
+}
+function showToast(msg, type) {
+  var el=$('toast');
+  $('toast-msg').textContent = msg;
+  el.className = 'on'+(type?' '+type:'');
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){ el.classList.remove('on'); }, 3500);
+}
+function showErr(form, msg) {
+  var el=$('err-'+form);
+  el.textContent=msg; el.classList.add('on');
+  clearTimeout(el._t);
+  el._t=setTimeout(function(){ el.classList.remove('on'); }, 5000);
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key!=='Enter') return;
+  var id=document.activeElement&&document.activeElement.id;
+  if (id==='l-email'||id==='l-pass') doLogin();
+});
+</script>
+</body>
+</html>
