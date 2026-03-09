@@ -599,6 +599,12 @@ body.is-pc .toast-dot{display:none}
           <label class="fl" for="l-pass">パスワード</label>
           <input id="l-pass" class="fi" type="password" autocomplete="current-password" placeholder="••••••••">
         </div>
+        <div style="margin-bottom:.6rem">
+          <label style="display:flex;align-items:center;gap:.6rem;cursor:pointer;min-height:36px;">
+            <input id="l-keep" type="checkbox" style="width:16px;height:16px;accent-color:var(--rose);cursor:pointer;flex-shrink:0;">
+            <span style="font-size:.8rem;color:rgba(255,255,255,.45);">このデバイスでのログイン状態を保持する</span>
+          </label>
+        </div>
         <button class="btn-a" id="btn-login" onclick="doLogin()">ログイン</button>
         <div id="err-login" class="aerr" role="alert"></div>
       </div>
@@ -638,7 +644,7 @@ body.is-pc .toast-dot{display:none}
             </p>
             <label style="display:flex;align-items:center;gap:.6rem;cursor:pointer;min-height:44px;">
               <input id="r-agree" type="checkbox" style="width:18px;height:18px;accent-color:var(--rose);cursor:pointer;flex-shrink:0;">
-              <span style="font-size:.85rem;color:rgba(255,255,255,.75);font-weight:500;">同意する</span>
+              <span style="font-size:.85rem;color:rgba(255,255,255,.75);font-weight:500;">■ 同意する</span>
             </label>
           </div>
         </div>
@@ -835,7 +841,7 @@ body.is-pc .toast-dot{display:none}
 //  → 「次のユーザーとして実行: 自分」「アクセスできるユーザー: 全員」
 //  → デプロイ → 表示されたURLをコピーしてここに貼る
 // ============================================================
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbwpxEwZB6lVsYeeskx3OwP4VLazmcGui10UKsUdDi5Qstzwcjq2qFY4Z1lg0bj_FC1D/exec';
+var GAS_URL = 'https://script.google.com/macros/s/【ここにデプロイID】/exec';
 
 // ============================================================
 //  GAS APIブリッジ（fetch版）
@@ -917,14 +923,23 @@ function sha256hex(str) {
 // ============================================================
 //  セッション管理
 // ============================================================
-function saveSession(token, user) {
+function saveSession(token, user, persist) {
   TOKEN = token;
   U     = user;
-  try { sessionStorage.setItem('_pru_name', user.username || user.email); } catch(e){}
+  // persist=true のとき localStorage に保存 → 次回自動ログイン
+  try {
+    if (persist) {
+      localStorage.setItem('_pr_token', token);
+      localStorage.setItem('_pr_user',  JSON.stringify(user));
+    }
+  } catch(e){}
 }
 function clearSession() {
   TOKEN = null; U = null;
-  try { sessionStorage.removeItem('_pru_name'); } catch(e){}
+  try {
+    localStorage.removeItem('_pr_token');
+    localStorage.removeItem('_pr_user');
+  } catch(e){}
 }
 function handleSessionExpired() {
   clearSession();
@@ -943,11 +958,47 @@ function handleSessionExpired() {
 //  初期化
 // ============================================================
 window.addEventListener('load', function() {
-  setTimeout(function() {
-    var l = $('loader');
-    l.style.opacity = '0';
-    setTimeout(function(){ l.style.display = 'none'; }, 500);
-  }, 1400);
+  // localStorage に保存済みトークンがあればサーバーで検証して自動ログイン
+  var savedToken = null;
+  var savedUser  = null;
+  try {
+    savedToken = localStorage.getItem('_pr_token');
+    savedUser  = JSON.parse(localStorage.getItem('_pr_user') || 'null');
+  } catch(e){}
+
+  if (savedToken && savedUser) {
+    // トークンをサーバーで検証（verifySession相当: getCasesWithAppliedを呼んで確認）
+    gas('getCasesWithApplied', savedToken).then(function(r) {
+      if (r && !r.error) {
+        // 有効なセッション → そのまま自動ログイン
+        TOKEN = savedToken;
+        U     = savedUser;
+        enterApp();
+      } else {
+        // 無効・期限切れ → ストレージ削除してログイン画面
+        clearSession();
+      }
+      // ローダーを消す
+      setTimeout(function() {
+        var l = $('loader');
+        l.style.opacity = '0';
+        setTimeout(function(){ l.style.display = 'none'; }, 500);
+      }, 200);
+    }).catch(function() {
+      clearSession();
+      setTimeout(function() {
+        var l = $('loader');
+        l.style.opacity = '0';
+        setTimeout(function(){ l.style.display = 'none'; }, 500);
+      }, 200);
+    });
+  } else {
+    setTimeout(function() {
+      var l = $('loader');
+      l.style.opacity = '0';
+      setTimeout(function(){ l.style.display = 'none'; }, 500);
+    }, 1400);
+  }
 });
 
 // ============================================================
@@ -969,7 +1020,7 @@ function doLogin() {
   sha256hex(pass + 'PR_PLATFORM_SALT_2024').then(function(hashedPass) {
     return gas('loginUser', cSan(email,254), hashedPass);
   }).then(function(r) {
-    if (r && r.success) { saveSession(r.token, r.user); enterApp(); }
+    if (r && r.success) { saveSession(r.token, r.user, $('l-keep').checked); enterApp(); }
     else showErr('login', (r && r.message) || 'ログインに失敗しました');
     dis('btn-login', false, 'ログイン');
   }).catch(function() {
@@ -993,7 +1044,7 @@ function doRegister() {
     return gas('registerUser', cSan(email,254), hashedPass,
       cSan(user,50), cSan(ig,100), Number(fw)||0, cSan(url,500), true);
   }).then(function(r) {
-    if (r && r.success) { saveSession(r.token, r.user); enterApp(); }
+    if (r && r.success) { saveSession(r.token, r.user, $('l-keep').checked); enterApp(); }
     else showErr('reg', (r && r.message) || '登録に失敗しました');
     dis('btn-reg', false, 'アカウントを作成');
   }).catch(function() {
