@@ -961,7 +961,7 @@ function doLogin() {
     else showErr('login', (r && r.message) || 'ログインに失敗しました');
     dis('btn-login', false, 'ログイン');
   }).catch(function() {
-    showErr('login', 'エラーが発生しました。GAS URLの設定を確認してください。');
+    showErr('login', 'エラーが発生しました。時間を空けて再ログインしてください。');
     dis('btn-login', false, 'ログイン');
   });
 }
