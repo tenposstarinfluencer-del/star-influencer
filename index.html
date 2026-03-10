@@ -746,14 +746,10 @@ body.is-pc .toast-dot{display:none}
       <div class="msb" id="m-loc"></div>
       <div class="mds">
         <div class="mds-t">📅 来店日程候補（最大2つ）</div>
-        <div id="avail-days-note" style="font-size:.72rem;color:var(--rose);margin-bottom:.6rem;display:none">
-          ⚠ 来店可能曜日のみ選択できます：<span id="avail-days-label"></span>
-        </div>
         <div class="mdr">
           <div>
             <div class="mdl"><span class="mdn">1</span>第1希望 — 日付</div>
-            <button type="button" class="mi cal-trigger" id="m-d1-btn" onclick="openCal(1)" style="text-align:left;cursor:pointer;color:var(--ink3)">日付を選択</button>
-            <input type="hidden" id="m-d1">
+            <input class="mi" id="m-d1" type="date">
           </div>
           <div>
             <div class="mdl"><span class="mdn">1</span>第1希望 — 時間</div>
@@ -763,35 +759,12 @@ body.is-pc .toast-dot{display:none}
         <div class="mdr">
           <div>
             <div class="mdl"><span class="mdn">2</span>第2希望 — 日付</div>
-            <button type="button" class="mi cal-trigger" id="m-d2-btn" onclick="openCal(2)" style="text-align:left;cursor:pointer;color:var(--ink3)">日付を選択</button>
-            <input type="hidden" id="m-d2">
+            <input class="mi" id="m-d2" type="date">
           </div>
           <div>
             <div class="mdl"><span class="mdn">2</span>第2希望 — 時間</div>
             <input class="mi" id="m-t2" type="time">
           </div>
-        </div>
-      </div>
-      <!-- カスタムカレンダー -->
-      <div id="cal-overlay" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(26,26,26,.5)" onclick="closeCal()"></div>
-      <div id="cal-popup" style="display:none;position:fixed;z-index:700;background:var(--paper2);border-radius:var(--r);box-shadow:var(--shadow-lg);padding:1rem;width:min(320px,92vw);left:50%;transform:translateX(-50%);top:50%;margin-top:-170px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem">
-          <button onclick="calMove(-1)" style="background:none;border:none;cursor:pointer;font-size:1.2rem;padding:4px 10px;color:var(--ink2)">‹</button>
-          <span id="cal-month-label" style="font-family:'Shippori Mincho',serif;font-size:.95rem;font-weight:600"></span>
-          <button onclick="calMove(1)" style="background:none;border:none;cursor:pointer;font-size:1.2rem;padding:4px 10px;color:var(--ink2)">›</button>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:.4rem">
-          <div style="text-align:center;font-size:.7rem;color:#e05555;padding:3px 0">日</div>
-          <div style="text-align:center;font-size:.7rem;color:var(--ink3);padding:3px 0">月</div>
-          <div style="text-align:center;font-size:.7rem;color:var(--ink3);padding:3px 0">火</div>
-          <div style="text-align:center;font-size:.7rem;color:var(--ink3);padding:3px 0">水</div>
-          <div style="text-align:center;font-size:.7rem;color:var(--ink3);padding:3px 0">木</div>
-          <div style="text-align:center;font-size:.7rem;color:var(--ink3);padding:3px 0">金</div>
-          <div style="text-align:center;font-size:.7rem;color:#4444e0;padding:3px 0">土</div>
-        </div>
-        <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px"></div>
-        <div style="margin-top:.7rem;text-align:right">
-          <button onclick="closeCal()" style="background:none;border:1px solid var(--border);border-radius:var(--rs);padding:7px 16px;font-size:.82rem;color:var(--ink3);cursor:pointer">キャンセル</button>
         </div>
       </div>
       <div class="mlbl">メッセージ（任意）</div>
@@ -1208,7 +1181,7 @@ function makeCard(c, i) {
   var apBtn;
   if (closed)       apBtn = '<button class="btn-ap" disabled>締め切り</button>';
   else if (applied) apBtn = '<button class="btn-ap" disabled>応募済み</button>';
-  else apBtn = '<button class="btn-ap" data-id="'+xe(c.id)+'" data-store="'+xe(c.storeName||'')+'" data-loc="'+xe(locTxt)+'" data-days="'+xe(c.availableDays||'')+'" onclick="openApplyFromBtn(this)">応募する →</button>';
+  else apBtn = '<button class="btn-ap" onclick="openApply(\''+esc(c.id)+'\',\''+esc(c.storeName||'')+'\',\''+esc(locTxt)+'\')">応募する →</button>';
 
   return '<div class="card" style="animation-delay:'+delay+'s">'
     +'<div class="card-inner">'
@@ -1240,127 +1213,15 @@ function makeCard(c, i) {
 // ============================================================
 //  APPLY MODAL
 // ============================================================
-// 来店可能曜日の文字列 → 許可する曜日インデックス配列に変換
-// 「月・水・金」「月火水木金土日」「月〜金」のような形式に対応
-function parseAllowedDays(str) {
-  if (!str) return null; // nullなら全曜日OK
-  var map = {'日':0,'月':1,'火':2,'水':3,'木':4,'金':5,'土':6};
-  var allowed = [];
-  // 「〜」または「～」で範囲指定（例: 月〜金）
-  var rangeMatch = str.match(/([日月火水木金土])[〜～～-]([日月火水木金土])/);
-  if (rangeMatch) {
-    var s = map[rangeMatch[1]], e = map[rangeMatch[2]];
-    for (var i = s; i <= e; i++) allowed.push(i);
-    return allowed;
-  }
-  // 個別指定（例: 月・水・金 / 月水金）
-  Object.keys(map).forEach(function(k) {
-    if (str.indexOf(k) >= 0) allowed.push(map[k]);
-  });
-  return allowed.length > 0 ? allowed : null;
-}
-
-var CAL_TARGET   = 1;      // 1 or 2
-var CAL_YEAR     = 0;
-var CAL_MONTH    = 0;
-var CAL_ALLOWED  = null;   // null=全日OK, 配列=許可曜日
-
-// data-* 属性からパラメータを受け取るラッパー
-function openApplyFromBtn(btn) {
-  openApply(
-    btn.dataset.id,
-    btn.dataset.store,
-    btn.dataset.loc,
-    btn.dataset.days
-  );
-}
-
-function openApply(id, store, loc, availableDays) {
-  PENDING     = id;
-  CAL_ALLOWED = parseAllowedDays(availableDays || '');
+function openApply(id, store, loc) {
+  PENDING = id;
   $('m-store').textContent = store;
   $('m-loc').textContent   = loc;
-  ['m-d1','m-t1','m-d2','m-t2','m-msg'].forEach(function(el){ $(el).value=''; });
-  $('m-d1-btn').textContent = '日付を選択';
-  $('m-d1-btn').style.color = 'var(--ink3)';
-  $('m-d2-btn').textContent = '日付を選択';
-  $('m-d2-btn').style.color = 'var(--ink3)';
-  // 来店可能曜日の注記
-  if (CAL_ALLOWED && availableDays) {
-    $('avail-days-label').textContent = availableDays;
-    $('avail-days-note').style.display = 'block';
-  } else {
-    $('avail-days-note').style.display = 'none';
-  }
+  ['m-d1','m-t1','m-d2','m-t2','m-msg'].forEach(function(i){ $(i).value=''; });
+  var today = new Date().toISOString().split('T')[0];
+  $('m-d1').setAttribute('min', today);
+  $('m-d2').setAttribute('min', today);
   openMod('mod-apply');
-}
-
-function openCal(target) {
-  CAL_TARGET = target;
-  var now = new Date();
-  CAL_YEAR  = now.getFullYear();
-  CAL_MONTH = now.getMonth();
-  renderCal();
-  $('cal-overlay').style.display = 'block';
-  $('cal-popup').style.display   = 'block';
-}
-
-function closeCal() {
-  $('cal-overlay').style.display = 'none';
-  $('cal-popup').style.display   = 'none';
-}
-
-function calMove(dir) {
-  CAL_MONTH += dir;
-  if (CAL_MONTH > 11) { CAL_MONTH = 0;  CAL_YEAR++; }
-  if (CAL_MONTH < 0)  { CAL_MONTH = 11; CAL_YEAR--; }
-  renderCal();
-}
-
-function renderCal() {
-  var months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-  $('cal-month-label').textContent = CAL_YEAR + '年 ' + months[CAL_MONTH];
-  var grid  = $('cal-grid');
-  var today = new Date(); today.setHours(0,0,0,0);
-  var first = new Date(CAL_YEAR, CAL_MONTH, 1);
-  var last  = new Date(CAL_YEAR, CAL_MONTH + 1, 0);
-  var html  = '';
-  // 月初の空白
-  for (var b = 0; b < first.getDay(); b++) html += '<div></div>';
-  // 日付セル
-  for (var d = 1; d <= last.getDate(); d++) {
-    var dt  = new Date(CAL_YEAR, CAL_MONTH, d);
-    var dow = dt.getDay();
-    var isPast    = dt < today;
-    var isAllowed = !CAL_ALLOWED || CAL_ALLOWED.indexOf(dow) >= 0;
-    var disabled  = isPast || !isAllowed;
-    // 色
-    var color = disabled ? 'var(--border2)'
-              : dow === 0 ? '#e05555'
-              : dow === 6 ? '#4444e0'
-              : 'var(--ink)';
-    var bg = disabled ? 'var(--paper)' : 'var(--paper2)';
-    var cursor = disabled ? 'default' : 'pointer';
-    var dateStr = CAL_YEAR + '-' + ('0'+(CAL_MONTH+1)).slice(-2) + '-' + ('0'+d).slice(-2);
-    html += '<div onclick="' + (disabled ? '' : 'pickDate('' + dateStr + '')') + '" style="'
-      + 'text-align:center;padding:6px 2px;border-radius:6px;font-size:.82rem;'
-      + 'color:'+color+';background:'+bg+';cursor:'+cursor+';'
-      + (disabled ? 'opacity:.35;' : 'transition:background .15s;')
-      + '" ' + (disabled ? '' : 'onmouseover="this.style.background='var(--rose-light)'" onmouseout="this.style.background='var(--paper2)'"')
-      + '>' + d + '</div>';
-  }
-  grid.innerHTML = html;
-}
-
-function pickDate(dateStr) {
-  var parts = dateStr.split('-');
-  var label = parseInt(parts[1],10) + '月' + parseInt(parts[2],10) + '日';
-  var btnId = 'm-d' + CAL_TARGET + '-btn';
-  var hidId = 'm-d' + CAL_TARGET;
-  $(btnId).textContent = label;
-  $(btnId).style.color = 'var(--ink)';
-  $(hidId).value = dateStr;
-  closeCal();
 }
 
 function doApply() {
@@ -1541,8 +1402,6 @@ function closeMod(id) {
   if (id==='mod-prof') {
     var bp=$('bn-prof'); if(bp) bp.classList.remove('on');
   }
-  // 応募モーダルを閉じたらカレンダーも閉じる
-  if (id==='mod-apply') closeCal();
 }
 document.querySelectorAll('.mov').forEach(function(el) {
   el.addEventListener('click', function(e){ if(e.target===el) closeMod(el.id); });
