@@ -869,6 +869,7 @@ body.is-pc .toast-dot{display:none}
 //  → デプロイ → 表示されたURLをコピーしてここに貼る
 // ============================================================
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbwpxEwZB6lVsYeeskx3OwP4VLazmcGui10UKsUdDi5Qstzwcjq2qFY4Z1lg0bj_FC1D/exec';
+
 // ============================================================
 //  GAS APIブリッジ（fetch版）
 //  google.script.run の代替
@@ -1323,32 +1324,31 @@ function renderCal() {
   var today = new Date(); today.setHours(0,0,0,0);
   var first = new Date(CAL_YEAR, CAL_MONTH, 1);
   var last  = new Date(CAL_YEAR, CAL_MONTH + 1, 0);
-  var html  = '';
-  // 月初の空白
-  for (var b = 0; b < first.getDay(); b++) html += '<div></div>';
-  // 日付セル
+  grid.innerHTML = '';
+  for (var b = 0; b < first.getDay(); b++) { var sp = document.createElement('div'); grid.appendChild(sp); }
   for (var d = 1; d <= last.getDate(); d++) {
-    var dt  = new Date(CAL_YEAR, CAL_MONTH, d);
-    var dow = dt.getDay();
-    var isPast    = dt < today;
-    var isAllowed = !CAL_ALLOWED || CAL_ALLOWED.indexOf(dow) >= 0;
-    var disabled  = isPast || !isAllowed;
-    // 色
-    var color = disabled ? 'var(--border2)'
-              : dow === 0 ? '#e05555'
-              : dow === 6 ? '#4444e0'
-              : 'var(--ink)';
-    var bg = disabled ? 'var(--paper)' : 'var(--paper2)';
-    var cursor = disabled ? 'default' : 'pointer';
-    var dateStr = CAL_YEAR + '-' + ('0'+(CAL_MONTH+1)).slice(-2) + '-' + ('0'+d).slice(-2);
-    html += '<div onclick="' + (disabled ? '' : 'pickDate('' + dateStr + '')') + '" style="'
-      + 'text-align:center;padding:6px 2px;border-radius:6px;font-size:.82rem;'
-      + 'color:'+color+';background:'+bg+';cursor:'+cursor+';'
-      + (disabled ? 'opacity:.35;' : 'transition:background .15s;')
-      + '" ' + (disabled ? '' : 'onmouseover="this.style.background='var(--rose-light)'" onmouseout="this.style.background='var(--paper2)'"')
-      + '>' + d + '</div>';
+    var dt       = new Date(CAL_YEAR, CAL_MONTH, d);
+    var dow      = dt.getDay();
+    var isPast   = dt < today;
+    var isOk     = !CAL_ALLOWED || CAL_ALLOWED.indexOf(dow) >= 0;
+    var disabled = isPast || !isOk;
+    var color    = disabled ? 'var(--border2)' : dow === 0 ? '#e05555' : dow === 6 ? '#4444e0' : 'var(--ink)';
+    var dateStr  = CAL_YEAR + '-' + ('0'+(CAL_MONTH+1)).slice(-2) + '-' + ('0'+d).slice(-2);
+    var cell = document.createElement('div');
+    cell.textContent = d;
+    cell.style.cssText = 'text-align:center;padding:6px 2px;border-radius:6px;font-size:.82rem;'
+      + 'color:' + color + ';background:' + (disabled ? 'var(--paper)' : 'var(--paper2)') + ';'
+      + 'cursor:' + (disabled ? 'default' : 'pointer') + ';'
+      + (disabled ? 'opacity:.35;' : 'transition:background .15s;');
+    if (!disabled) {
+      (function(ds) {
+        cell.addEventListener('click', function() { pickDate(ds); });
+        cell.addEventListener('mouseover', function() { this.style.background = 'var(--rose-light)'; });
+        cell.addEventListener('mouseout',  function() { this.style.background = 'var(--paper2)'; });
+      })(dateStr);
+    }
+    grid.appendChild(cell);
   }
-  grid.innerHTML = html;
 }
 
 function pickDate(dateStr) {
