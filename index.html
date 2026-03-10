@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <meta name="format-detection" content="telephone=no">
-<title>テンポス PR案件掲示板</title>
+<title>PR案件プラットフォーム</title>
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ===== RESET ===== */
@@ -571,7 +571,7 @@ body.is-pc .toast-dot{display:none}
 <!-- LOADER -->
 <div id="loader">
   <div>
-    <div class="lb-brand">Tenpos Influencer <em>PR</em></div>
+    <div class="lb-brand">INFLUENCER <em>PR</em></div>
     <div class="lb-sub">インフルエンサー × PR案件マッチング</div>
     <div class="lb-bar"><div class="lb-fill"></div></div>
   </div>
@@ -581,7 +581,7 @@ body.is-pc .toast-dot{display:none}
 <div id="auth-page">
   <div class="auth-wrap">
     <div class="auth-brand">
-      <div class="auth-logo">Tenpos Influencer <em>PR</em></div>
+      <div class="auth-logo">INFLUENCER <em>PR</em></div>
       <div class="auth-tagline">インフルエンサー × PR案件マッチング</div>
     </div>
     <div class="auth-box">
@@ -1208,7 +1208,7 @@ function makeCard(c, i) {
   var apBtn;
   if (closed)       apBtn = '<button class="btn-ap" disabled>締め切り</button>';
   else if (applied) apBtn = '<button class="btn-ap" disabled>応募済み</button>';
-  else apBtn = '<button class="btn-ap" onclick="openApply(\''+esc(c.id)+'\',\''+esc(c.storeName||'')+'\',\''+esc(locTxt)+'\',\''+esc(c.availableDays||'')+'\')">応募する →</button>';
+  else apBtn = '<button class="btn-ap" data-id="'+xe(c.id)+'" data-store="'+xe(c.storeName||'')+'" data-loc="'+xe(locTxt)+'" data-days="'+xe(c.availableDays||'')+'" onclick="openApplyFromBtn(this)">応募する →</button>';
 
   return '<div class="card" style="animation-delay:'+delay+'s">'
     +'<div class="card-inner">'
@@ -1264,6 +1264,16 @@ var CAL_TARGET   = 1;      // 1 or 2
 var CAL_YEAR     = 0;
 var CAL_MONTH    = 0;
 var CAL_ALLOWED  = null;   // null=全日OK, 配列=許可曜日
+
+// data-* 属性からパラメータを受け取るラッパー
+function openApplyFromBtn(btn) {
+  openApply(
+    btn.dataset.id,
+    btn.dataset.store,
+    btn.dataset.loc,
+    btn.dataset.days
+  );
+}
 
 function openApply(id, store, loc, availableDays) {
   PENDING     = id;
