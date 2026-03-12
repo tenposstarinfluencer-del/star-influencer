@@ -264,12 +264,7 @@ body.is-pc .cph{font-size:2.5rem;min-height:155px}
   font-family:'Shippori Mincho',serif;font-size:.78rem;letter-spacing:.2em;color:#fff;
   border:1px solid rgba(255,255,255,.45);padding:.25rem .65rem;border-radius:4px
 }
-.badge-reward{
-  position:absolute;bottom:.4rem;right:.4rem;
-  background:rgba(26,26,26,.92);color:var(--gold);
-  font-size:.65rem;font-weight:700;letter-spacing:.04em;
-  padding:3px 8px;border-radius:10px;border:1px solid rgba(184,146,58,.3)
-}
+.badge-reward{display:none}
 .badge-applied{
   position:absolute;top:.4rem;left:.4rem;
   background:var(--sage);color:#fff;
@@ -321,9 +316,23 @@ body.is-sp .cbd{padding:.55rem .75rem}
 .cng b{margin-right:3px}
 .cft{
   padding:.6rem .9rem;border-top:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;gap:.4rem
+  display:flex;align-items:center;justify-content:space-between;gap:.4rem;
+  margin-top:auto
 }
 body.is-sp .cft{padding:.55rem .75rem}
+/* 報酬バー */
+.reward-bar{
+  padding:.45rem .9rem;
+  background:var(--gold-pale);border-bottom:1px solid rgba(184,146,58,.18);
+  display:flex;align-items:center;gap:.35rem
+}
+body.is-sp .reward-bar{padding:.4rem .75rem}
+.reward-val{
+  font-family:'Shippori Mincho',serif;
+  font-size:1.05rem;font-weight:700;color:var(--gold);letter-spacing:.03em
+}
+body.is-sp .reward-val{font-size:.95rem}
+.reward-lbl{font-size:.62rem;color:var(--gold);opacity:.7;letter-spacing:.08em}
 .comp{font-size:.7rem;padding:3px 9px;border-radius:10px;letter-spacing:.03em}
 .comp-ok{background:var(--sage-light);color:var(--sage);border:1px solid rgba(107,143,113,.22)}
 .comp-ng{background:var(--rose-light);color:var(--rose);border:1px solid rgba(200,97,74,.18)}
@@ -1198,27 +1207,29 @@ function makeCard(c, i) {
       +'<div class="cph" style="display:none">🏪</div>'
     : '<div class="cph">🏪</div>';
 
-  var rwdBadge  = c.reward  ? '<div class="badge-reward">¥'+xe(fmtN(c.reward))+'</div>' : '';
-  var closedOv  = closed    ? '<div class="closed-ov"><div class="closed-txt">締め切りました</div></div>' : '';
-  var appliedBg = applied   ? '<div class="badge-applied">✓ 応募済み</div>' : '';
+  var closedOv  = closed  ? '<div class="closed-ov"><div class="closed-txt">締め切りました</div></div>' : '';
+  var appliedBg = applied ? '<div class="badge-applied">✓ 応募済み</div>' : '';
   var locTxt    = [c.prefecture,c.city].filter(Boolean).join(' ');
 
-  var igUrl  = (c.instagramUrl && /^https?:\/\//.test(c.instagramUrl)) ? c.instagramUrl : '';
+  var igUrl = (c.instagramUrl && /^https?:\/\//.test(c.instagramUrl)) ? c.instagramUrl : '';
   var locH = '<div class="cloc">'
     +(locTxt ? '<span class="cloc-t">📍 '+xe(locTxt)+'</span>' : '')
     +'<a class="cloc-a" href="'+mapU+'" target="_blank" rel="noopener noreferrer">'
-    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">'
+    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="9" height="9">'
     +'<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>'
     +'<circle cx="12" cy="9" r="2.5"/></svg>Map</a>'
-    +(igUrl
-      ? '<a class="cloc-a cloc-ig" href="'+xe(igUrl)+'" target="_blank" rel="noopener noreferrer">'
-        +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="9" height="9">'
-        +'<rect x="2" y="2" width="20" height="20" rx="5"/>'
-        +'<circle cx="12" cy="12" r="4.5"/>'
-        +'<circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>'
-        +'</svg>SNS</a>'
-      : '')
+    +(igUrl ? '<a class="cloc-a cloc-ig" href="'+xe(igUrl)+'" target="_blank" rel="noopener noreferrer">'
+      +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="9" height="9">'
+      +'<rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4.5"/>'
+      +'<circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>SNS</a>' : '')
     +'</div>';
+
+  var rewardBar = c.reward
+    ? '<div class="reward-bar">'
+      +'<span class="reward-lbl">報酬</span>'
+      +'<span class="reward-val">¥'+xe(fmtN(c.reward))+'</span>'
+      +'</div>'
+    : '';
 
   var comp    = c.companionAllowed||'';
   var compCls = comp.indexOf('可')>=0 ? 'comp-ok' : 'comp-ng';
@@ -1230,13 +1241,14 @@ function makeCard(c, i) {
 
   return '<div class="card" style="animation-delay:'+delay+'s">'
     +'<div class="card-inner">'
-      +'<div class="cimg-w">'+imgH+closedOv+appliedBg+rwdBadge+'</div>'
+      +'<div class="cimg-w">'+imgH+closedOv+appliedBg+'</div>'
       +'<div class="card-right">'
         +'<div class="chd">'
           +(c.title?'<div class="ctag">'+xe(c.title)+'</div>':'')
           +'<div class="cname">'+xe(c.storeName||'店舗名未設定')+'</div>'
           +locH
         +'</div>'
+        +rewardBar
         +'<div class="cbd">'
           +'<div class="chips">'
             +(c.availableDays?'<span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'+xe(c.availableDays)+'</span>':'')
@@ -1563,7 +1575,7 @@ function makeApp(a, i) {
       ? '<span style="display:inline-flex;align-items:center;gap:5px;background:var(--border);color:var(--ink3);border-radius:var(--rs);padding:9px 16px;font-size:.8rem;font-weight:600;min-height:38px;">✅ 来店済（'+xe(a.visitedAt)+'）</span>'
       : '<button onclick="doVisit(\''+xe(a.applicationId)+'\')" id="visit-btn-'+xe(a.applicationId)+'" style="display:inline-flex;align-items:center;gap:5px;background:var(--gold);color:#fff;border:none;border-radius:var(--rs);padding:9px 16px;font-size:.8rem;font-weight:600;cursor:pointer;min-height:38px;touch-action:manipulation;">'
         +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="14" height="14"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'
-        +'来店する</button>';
+        +'店舗に到着</button>';
 
     approvedSection =
       '<div style="margin-top:.6rem;background:var(--sage-light);border:1px solid rgba(107,143,113,.3);border-radius:var(--rs);padding:.65rem .85rem;">'
