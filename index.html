@@ -234,20 +234,21 @@ body.is-pc .grid{
 .card{
   background:var(--paper2);border:1px solid var(--border);
   border-radius:var(--r);overflow:hidden;
-  animation:cIn .3s ease both
+  animation:cIn .3s ease both;
+  display:flex;flex-direction:column
 }
 @keyframes cIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 body.is-pc .card{transition:transform .22s,box-shadow .22s,border-color .22s}
 body.is-pc .card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:var(--border2)}
 .card:active{opacity:.95}
-.card-inner{display:flex;flex-direction:column}
+.card-inner{display:flex;flex-direction:column;flex:1}
 body.is-sp .card-inner{flex-direction:row}
 .cimg-w{
   position:relative;overflow:hidden;background:var(--gold-pale);
   flex-shrink:0
 }
 body.is-pc .cimg-w{height:155px;width:100%}
-body.is-sp .cimg-w{width:110px;height:auto;min-height:110px}
+body.is-sp .cimg-w{width:110px;align-self:stretch;min-height:110px}
 .cimg{width:100%;height:100%;object-fit:cover;display:block}
 body.is-sp .cimg{position:absolute;inset:0}
 .cph{
@@ -300,7 +301,7 @@ body.is-sp .cname{font-size:.9rem}
 .cloc-ig{color:#c13584;border-color:rgba(193,53,132,.25)}
 .cloc-ig:active{background:#c13584;color:#fff;border-color:#c13584}
 .cloc-a svg{width:9px;height:9px}
-.cbd{padding:.65rem .9rem;flex:1}
+.cbd{padding:.65rem .9rem;flex:1;min-height:0}
 body.is-sp .cbd{padding:.55rem .75rem}
 .chips{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.55rem}
 .chip{
@@ -327,13 +328,9 @@ body.is-sp .cbd{padding:.55rem .75rem}
   margin-top:auto
 }
 body.is-sp .cft{padding:.5rem .65rem .5rem .75rem}
-/* 応募ボタンを常に右下に固定 */
-.cft .btn-ap{
-  position:absolute;bottom:.6rem;right:.75rem;
-  margin:0
-}
-body.is-sp .cft .btn-ap{bottom:.55rem;right:.65rem}
-/* ボタン分の右余白を確保 */
+/* ボタンは通常フロー（absoluteをやめる） */
+.cft .btn-ap{position:static;margin:0}
+/* 同伴ラベルがボタンに被らないよう右余白確保 */
 .cft .comp{max-width:calc(100% - 120px)}
 /* 報酬バー */
 .reward-bar{
