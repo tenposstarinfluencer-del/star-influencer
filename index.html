@@ -610,7 +610,7 @@ body.is-pc .toast-dot{display:none}
     <div class="auth-box">
       <div class="atabs">
         <button class="atab on" id="tab-login" onclick="switchTab('login')">ログイン</button>
-        <button class="atab" id="tab-reg" onclick="switchTab('reg');var ts=document.getElementById('r-ts');if(ts)ts.value=Date.now();">新規登録</button>
+        <button class="atab" id="tab-reg" onclick="switchTab('reg')">新規登録</button>
       </div>
       <!-- ログイン -->
       <div id="f-login">
@@ -671,12 +671,7 @@ body.is-pc .toast-dot{display:none}
             </label>
           </div>
         </div>
-        <!-- honeypot: BOT対策（人間には見えない・触れない） -->
-        <div style="position:absolute;left:-9999px;top:-9999px;opacity:0;pointer-events:none;" aria-hidden="true">
-          <input id="r-hp" type="text" tabindex="-1" autocomplete="off" placeholder="leave empty">
-        </div>
-        <!-- 登録フォーム表示時刻（高速送信BOT検出用） -->
-        <input type="hidden" id="r-ts">
+
         <button class="btn-a" id="btn-reg" onclick="doRegister()">アカウントを作成</button>
         <div id="err-reg" class="aerr" role="alert"></div>
       </div>
@@ -903,7 +898,7 @@ body.is-pc .toast-dot{display:none}
 //  → 「次のユーザーとして実行: 自分」「アクセスできるユーザー: 全員」
 //  → デプロイ → 表示されたURLをコピーしてここに貼る
 // ============================================================
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbwpxEwZB6lVsYeeskx3OwP4VLazmcGui10UKsUdDi5Qstzwcjq2qFY4Z1lg0bj_FC1D/exec';
+var GAS_URL = 'https://script.google.com/macros/s/【ここにデプロイID】/exec';
 
 // ============================================================
 //  GAS APIブリッジ（fetch版）
@@ -974,13 +969,7 @@ function cEmail(e) {
 // ============================================================
 //  SHA-256ハッシュ（SubtleCrypto）
 // ============================================================
-function sha256hex(str) {
-  var enc = new TextEncoder().encode(str);
-  return crypto.subtle.digest('SHA-256', enc).then(function(buf) {
-    return Array.from(new Uint8Array(buf))
-      .map(function(b){ return ('0'+b.toString(16)).slice(-2); }).join('');
-  });
-}
+
 
 // ============================================================
 //  セッション管理
@@ -1079,9 +1068,8 @@ function doLogin() {
   if (!cEmail(email))    { showErr('login','メールアドレスの形式が正しくありません'); return; }
   if (pass.length < 8)   { showErr('login','パスワードは8文字以上です'); return; }
   dis('btn-login', true, '認証中…');
-  sha256hex(pass + 'PR_PLATFORM_SALT_2024').then(function(hashedPass) {
-    return gas('loginUser', cSan(email,254), hashedPass);
-  }).then(function(r) {
+  // パスワードは平文でHTTPS送信。ハッシュ化はサーバー側のみで行う。
+  gas('loginUser', cSan(email,254), pass).then(function(r) {
     if (r && r.success) { saveSession(r.token, r.user, $('l-keep').checked); enterApp(); }
     else showErr('login', (r && r.message) || 'ログイン情報が正しくありません');
     dis('btn-login', false, 'ログイン');
@@ -1092,17 +1080,6 @@ function doLogin() {
 }
 
 function doRegister() {
-  // BOT対策①: honeypotフィールドに値があればBOT
-  var hp = document.getElementById('r-hp');
-  if (hp && hp.value) return; // 無言で無視
-
-  // BOT対策②: フォーム表示から3秒未満の送信はBOT
-  var tsEl = document.getElementById('r-ts');
-  if (tsEl && tsEl.value) {
-    var elapsed = Date.now() - parseInt(tsEl.value, 10);
-    if (elapsed < 3000) return; // 無言で無視
-  }
-
   var email = gv('r-email'), pass = $('r-pass').value;
   var user  = gv('r-user'),  ig   = gv('r-ig');
   var fw    = gv('r-fw'),    url  = gv('r-url');
@@ -1113,14 +1090,10 @@ function doRegister() {
   if (!user.startsWith('@'))     { showErr('reg','ユーザー名は@から始めてください'); return; }
   if (url && !/^https?:\/\//.test(url)) { showErr('reg','URLはhttps://から始めてください'); return; }
   dis('btn-reg', true, '登録中…');
-  sha256hex(pass + 'PR_PLATFORM_SALT_2024').then(function(hashedPass) {
-    return gas('registerUser', cSan(email,254), hashedPass,
-      cSan(user,50), cSan(ig,100), Number(fw)||0, cSan(url,500), true);
-  }).then(function(r) {
-    if (r && r.success && r.pending) {
-      // 審査中画面を表示
-      showPendingScreen();
-    } else if (r && r.success) {
+  // パスワードは平文でHTTPS送信。ハッシュ化はサーバー側のみで行う。
+  gas('registerUser', cSan(email,254), pass,
+    cSan(user,50), cSan(ig,100), Number(fw)||0, cSan(url,500), true).then(function(r) {
+    if (r && r.success) {
       saveSession(r.token, r.user, $('l-keep').checked); enterApp();
     } else {
       showErr('reg', (r && r.message) || '登録に失敗しました');
@@ -1132,21 +1105,6 @@ function doRegister() {
   });
 }
 
-function showPendingScreen() {
-  // auth-pageを審査中メッセージに切り替え
-  var ap = $('auth-page');
-  ap.innerHTML =
-    '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;">'
-  + '<div style="max-width:420px;width:100%;text-align:center;">'
-  + '<div style="font-size:3rem;margin-bottom:1rem;">📬</div>'
-  + '<h2 style="font-family:'Shippori Mincho',serif;font-size:1.4rem;color:#fff;margin-bottom:.75rem;">登録を受け付けました</h2>'
-  + '<p style="color:rgba(255,255,255,.65);font-size:.88rem;line-height:1.8;margin-bottom:1.5rem;">'
-  + '現在、担当者がアカウントを審査中です。<br>'
-  + '承認が完了しましたらログインできるようになります。<br>'
-  + 'しばらくお待ちください。</p>'
-  + '<p style="color:rgba(255,255,255,.4);font-size:.75rem;">登録したメールアドレスに確認メールをお送りしました。</p>'
-  + '</div></div>';
-}
 
 function doLogout() {
   if (TOKEN) gas('logoutUser', TOKEN).catch(function(){});
