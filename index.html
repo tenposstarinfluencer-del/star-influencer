@@ -897,7 +897,7 @@ body.is-pc .toast-dot{display:none}
 //  → 「次のユーザーとして実行: 自分」「アクセスできるユーザー: 全員」
 //  → デプロイ → 表示されたURLをコピーしてここに貼る
 // ============================================================
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbwpxEwZB6lVsYeeskx3OwP4VLazmcGui10UKsUdDi5Qstzwcjq2qFY4Z1lg0bj_FC1D/exec';
+var GAS_URL = 'https://script.google.com/macros/s/【ここにデプロイID】/exec';
 
 // ============================================================
 //  GAS APIブリッジ（fetch版）
@@ -1467,11 +1467,20 @@ function loadApps() {
       $('alist').innerHTML = emptyHTML('📋','まだ応募はありません','案件一覧から気になる案件に応募してみましょう！');
       return;
     }
-    // 採用を先頭・不採用を末尾に並び替え
-    var approved = apps.filter(function(a){ return isApprovedStatus(a.appStatus); });
-    var pending  = apps.filter(function(a){ return isPendingStatus(a.appStatus); });
-    var rejected = apps.filter(function(a){ return isRejectedStatus(a.appStatus); });
-    ALL_APPS = approved.concat(pending).concat(rejected);
+    // ソート：採用(来店日時昇順) → 審査中 → 不採用 → 来店済み
+    function parseDateVal(a) {
+      // confirmedDate から日付値を取得（小さいほど近い）
+      if (!a.confirmedDate) return Infinity;
+      var d = new Date(a.confirmedDate);
+      return isNaN(d.getTime()) ? Infinity : d.getTime();
+    }
+    var visitedApps  = apps.filter(function(a){ return isApprovedStatus(a.appStatus) && !!a.visitedAt; });
+    var approvedApps = apps.filter(function(a){ return isApprovedStatus(a.appStatus) && !a.visitedAt; });
+    var pendingApps  = apps.filter(function(a){ return isPendingStatus(a.appStatus); });
+    var rejectedApps = apps.filter(function(a){ return isRejectedStatus(a.appStatus); });
+    // 採用（未来店）を来店日時の近い順にソート
+    approvedApps.sort(function(a, b){ return parseDateVal(a) - parseDateVal(b); });
+    ALL_APPS = approvedApps.concat(pendingApps).concat(rejectedApps).concat(visitedApps);
     renderApps();
   }).catch(function(err) {
     if (err === 'SESSION_EXPIRED') return;
@@ -1516,6 +1525,7 @@ function fmtDateTime(date, time) {
 
 // appliedAt（GASから来る文字列）を「○月○日 ○○:○○」に整形
 function doVisit(appId) {
+  if (!confirm('来店チェックを記録します。よろしいですか？')) return;
   var btn = document.getElementById('visit-btn-' + appId);
   if (btn) { btn.disabled = true; btn.textContent = '送信中…'; }
   gasAuth('visitCase', TOKEN, appId)
