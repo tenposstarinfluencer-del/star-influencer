@@ -897,7 +897,7 @@ body.is-pc .toast-dot{display:none}
 //  → 「次のユーザーとして実行: 自分」「アクセスできるユーザー: 全員」
 //  → デプロイ → 表示されたURLをコピーしてここに貼る
 // ============================================================
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbwpxEwZB6lVsYeeskx3OwP4VLazmcGui10UKsUdDi5Qstzwcjq2qFY4Z1lg0bj_FC1D/exec';
+var GAS_URL = 'https://script.google.com/macros/s/【ここにデプロイID】/exec';
 
 // ============================================================
 //  GAS APIブリッジ（fetch版）
@@ -1435,12 +1435,16 @@ function setAF(f, el) {
   renderApps();
 }
 
+function isApprovedStatus(s){ return s === '採用'; }
+function isRejectedStatus(s){ return s === '不採用'; }
+function isPendingStatus(s) { return s === '審査中' || (!isApprovedStatus(s) && !isRejectedStatus(s)); }
+
 function renderApps() {
   var list = ALL_APPS.filter(function(a) {
-    if (APP_FILTER === 'approved') return a.appStatus === '承認';
-    if (APP_FILTER === 'pending')  return a.appStatus === '審査中';
-    if (APP_FILTER === 'rejected') return a.appStatus === '否認';
-    return true;
+    if (APP_FILTER === 'approved') return isApprovedStatus(a.appStatus);
+    if (APP_FILTER === 'pending')  return isPendingStatus(a.appStatus);
+    if (APP_FILTER === 'rejected') return isRejectedStatus(a.appStatus);
+    return true; // 'all' は必ず全件表示
   });
   if (!list.length) {
     $('alist').innerHTML = emptyHTML('📋','該当する応募はありません','');
@@ -1464,9 +1468,9 @@ function loadApps() {
       return;
     }
     // 採用を先頭・不採用を末尾に並び替え
-    var approved = apps.filter(function(a){ return a.appStatus === '承認'; });
-    var pending  = apps.filter(function(a){ return a.appStatus === '審査中'; });
-    var rejected = apps.filter(function(a){ return a.appStatus === '否認'; });
+    var approved = apps.filter(function(a){ return isApprovedStatus(a.appStatus); });
+    var pending  = apps.filter(function(a){ return isPendingStatus(a.appStatus); });
+    var rejected = apps.filter(function(a){ return isRejectedStatus(a.appStatus); });
     ALL_APPS = approved.concat(pending).concat(rejected);
     renderApps();
   }).catch(function(err) {
@@ -1548,10 +1552,11 @@ function fmtAppliedAt(str) {
 }
 
 function makeApp(a, i) {
-  var isApproved = a.appStatus === '承認';
-  var isRejected = a.appStatus === '否認';
-  var ico = {'審査中':'⏳','承認':'✅','否認':'❌'}[a.appStatus]||'📄';
-  var cls = {'審査中':'s0','承認':'s1','否認':'s2'}[a.appStatus]||'s0';
+  var isApproved = isApprovedStatus(a.appStatus);
+  var isRejected = isRejectedStatus(a.appStatus);
+  var _st  = isApprovedStatus(a.appStatus) ? '採用' : isRejectedStatus(a.appStatus) ? '不採用' : '審査中';
+  var ico = {'審査中':'⏳','採用':'✅','不採用':'❌'}[_st]||'📄';
+  var cls = {'審査中':'s0','採用':'s1','不採用':'s2'}[_st]||'s0';
 
   // カード全体のスタイル
   var cardExtra = '';
@@ -1610,9 +1615,9 @@ function makeApp(a, i) {
   }
 
   return '<div class="ai" style="animation-delay:'+(i*0.05).toFixed(2)+'s;'+cardExtra+'">'
-    +'<div class="ast '+cls+'"><span style="font-size:1.1rem">'+ico+'</span><span>'+xe(a.appStatus)+'</span></div>'
+    +'<div class="ast '+cls+'"><span style="font-size:1.1rem">'+ico+'</span><span>'+xe(_st)+'</span></div>'
     +'<div class="ain">'
-      +(isApproved ? '<div style="font-size:.62rem;color:var(--sage);font-weight:700;letter-spacing:.1em;margin-bottom:.2rem">\ud83c\udf89 \u63a1\u7528\u3055\u308c\u307e\u3057\u305f\uff01</div>' : '')
+      +(isApproved ? '<div style="font-size:.62rem;color:var(--sage);font-weight:700;letter-spacing:.1em;margin-bottom:.2rem">🎉 採用されました！</div>' : '')
       +(isRejected ? '<div style="font-size:.62rem;color:var(--ink3);font-weight:600;letter-spacing:.06em;margin-bottom:.2rem">\u4e0d\u63a1\u7528</div>' : '')
       +'<div class="aist">'+xe(a.storeName)+'</div>'
       +'<div class="amet">'
