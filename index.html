@@ -1491,6 +1491,34 @@ function fmtDateTime(date, time) {
 }
 
 // appliedAt（GASから来る文字列）を「○月○日 ○○:○○」に整形
+function doVisit(appId) {
+  var btn = document.getElementById('visit-btn-' + appId);
+  if (btn) { btn.disabled = true; btn.textContent = '送信中…'; }
+  gasAuth('visitCase', TOKEN, appId)
+  .then(function(r) {
+    if (r && r.success) {
+      // ALL_APPSのvisitedAtを更新してカードを再描画
+      for (var i = 0; i < ALL_APPS.length; i++) {
+        if (ALL_APPS[i].applicationId === appId) {
+          ALL_APPS[i].visitedAt = r.visitedAt;
+          break;
+        }
+      }
+      renderApps();
+      showToast('来店チェックを記録しました ✅','ok');
+    } else if (r && r.message === 'already_visited') {
+      showToast('すでに来店済みです','err');
+      renderApps();
+    } else {
+      showToast((r&&r.message)||'エラーが発生しました','err');
+      if (btn) { btn.disabled = false; btn.textContent = '来店する'; }
+    }
+  }).catch(function(err) {
+    if (err !== 'SESSION_EXPIRED') showToast('エラーが発生しました','err');
+    if (btn) { btn.disabled = false; btn.textContent = '来店する'; }
+  });
+}
+
 function fmtAppliedAt(str) {
   if (!str) return '';
   // GASから「yyyy/MM/dd HH:mm」形式で来る
@@ -1510,14 +1538,15 @@ function makeApp(a, i) {
   if (isApproved) {
     cardExtra = 'border:2px solid var(--sage);box-shadow:0 0 0 3px rgba(107,143,113,.12);';
   } else if (isRejected) {
-    cardExtra = 'opacity:.5;filter:grayscale(.4);';
+    // 不採用: 灰色で残す
+    cardExtra = 'opacity:.55;filter:grayscale(.5);';
   }
 
   // 希望日程（審査中・否認時に表示）
-  var d1H = a.date1 ? '<span><b>第1希望</b>　' + fmtDateTime(a.date1, a.time1) + '</span>' : '';
-  var d2H = a.date2 ? '<span><b>第2希望</b>　' + fmtDateTime(a.date2, a.time2) + '</span>' : '';
+  var d1H = a.date1 ? '<span><b>第1希望</b>\u3000' + fmtDateTime(a.date1, a.time1) + '</span>' : '';
+  var d2H = a.date2 ? '<span><b>第2希望</b>\u3000' + fmtDateTime(a.date2, a.time2) + '</span>' : '';
 
-  // 承認時: 確定日時 + Mapボタン
+  // 承認時セクション
   var approvedSection = '';
   if (isApproved) {
     var confirmedDt = fmtDateTime(a.confirmedDate, a.confirmedTime);
@@ -1527,40 +1556,53 @@ function makeApp(a, i) {
     }
     var mapQ   = encodeURIComponent([(c&&c.storeName)||a.storeName,(c&&c.prefecture)||a.prefecture,(c&&c.city)||'',(c&&c.address)||''].filter(Boolean).join(' '));
     var mapUrl = 'https://www.google.com/maps/search/?api=1&query=' + mapQ;
+
+    // 来店ボタン
+    var visited    = !!a.visitedAt;
+    var visitedLbl = visited
+      ? '<span style="display:inline-flex;align-items:center;gap:5px;background:var(--border);color:var(--ink3);border-radius:var(--rs);padding:9px 16px;font-size:.8rem;font-weight:600;min-height:38px;">✅ 来店済（'+xe(a.visitedAt)+'）</span>'
+      : '<button onclick="doVisit(\''+xe(a.applicationId)+'\')" id="visit-btn-'+xe(a.applicationId)+'" style="display:inline-flex;align-items:center;gap:5px;background:var(--gold);color:#fff;border:none;border-radius:var(--rs);padding:9px 16px;font-size:.8rem;font-weight:600;cursor:pointer;min-height:38px;touch-action:manipulation;">'
+        +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="14" height="14"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'
+        +'来店する</button>';
+
     approvedSection =
       '<div style="margin-top:.6rem;background:var(--sage-light);border:1px solid rgba(107,143,113,.3);border-radius:var(--rs);padding:.65rem .85rem;">'
         +'<div style="font-size:.65rem;color:var(--sage);font-weight:700;letter-spacing:.1em;margin-bottom:.35rem">✅ 来店確定日時</div>'
         +(confirmedDt
           ? '<div style="font-family:\'Shippori Mincho\',serif;font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:.5rem">'+xe(confirmedDt)+'</div>'
-          : '<div style="font-size:.82rem;color:var(--ink3);margin-bottom:.5rem">日時は追って連絡されます</div>'
+          : '<div style="font-size:.82rem;color:var(--ink3);margin-bottom:.5rem">\u65e5\u6642\u306f\u8ffd\u3063\u3066\u9023\u7d61\u3055\u308c\u307e\u3059</div>'
         )
-        +'<a href="'+mapUrl+'" target="_blank" rel="noopener noreferrer" style="'
-          +'display:inline-flex;align-items:center;gap:5px;'
-          +'background:var(--rose);color:#fff;text-decoration:none;'
-          +'border-radius:var(--rs);padding:9px 16px;font-size:.8rem;font-weight:600;'
-          +'letter-spacing:.04em;min-height:38px;touch-action:manipulation;">'
-          +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="14" height="14">'
-            +'<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>'
-            +'<circle cx="12" cy="9" r="2.5"/>'
-          +'</svg>'
-          +'Google Mapで見る'
-        +'</a>'
+        +'<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-top:.4rem">'
+          +'<a href="'+mapUrl+'" target="_blank" rel="noopener noreferrer" style="'
+            +'display:inline-flex;align-items:center;gap:5px;'
+            +'background:var(--rose);color:#fff;text-decoration:none;'
+            +'border-radius:var(--rs);padding:9px 16px;font-size:.8rem;font-weight:600;'
+            +'letter-spacing:.04em;min-height:38px;touch-action:manipulation;">'
+            +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="14" height="14">'
+              +'<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>'
+              +'<circle cx="12" cy="9" r="2.5"/>'
+            +'</svg>'
+            +'Google Map'
+          +'</a>'
+          +visitedLbl
+        +'</div>'
       +'</div>';
   }
 
   return '<div class="ai" style="animation-delay:'+(i*0.05).toFixed(2)+'s;'+cardExtra+'">'
     +'<div class="ast '+cls+'"><span style="font-size:1.1rem">'+ico+'</span><span>'+xe(a.appStatus)+'</span></div>'
     +'<div class="ain">'
-      +(isApproved ? '<div style="font-size:.62rem;color:var(--sage);font-weight:700;letter-spacing:.1em;margin-bottom:.2rem">🎉 採用されました！</div>' : '')
+      +(isApproved ? '<div style="font-size:.62rem;color:var(--sage);font-weight:700;letter-spacing:.1em;margin-bottom:.2rem">\ud83c\udf89 \u63a1\u7528\u3055\u308c\u307e\u3057\u305f\uff01</div>' : '')
+      +(isRejected ? '<div style="font-size:.62rem;color:var(--ink3);font-weight:600;letter-spacing:.06em;margin-bottom:.2rem">\u4e0d\u63a1\u7528</div>' : '')
       +'<div class="aist">'+xe(a.storeName)+'</div>'
       +'<div class="amet">'
-        +'<span>📍 '+xe(a.prefecture)+'</span>'
-        +'<span>🗓 '+fmtAppliedAt(a.appliedAt)+'</span>'
-        +(a.reward?'<span>💰 ¥'+xe(fmtN(a.reward))+'</span>':'')
-        +(a.prMenu?'<span>✨ '+xe(a.prMenu)+'</span>':'')
+        +'<span>\ud83d\udccd '+xe(a.prefecture)+'</span>'
+        +'<span>\ud83d\uddd3 '+fmtAppliedAt(a.appliedAt)+'</span>'
+        +(a.reward?'<span>\ud83d\udcb0 \xa5'+xe(fmtN(a.reward))+'</span>':'')
+        +(a.prMenu?'<span>\u2728 '+xe(a.prMenu)+'</span>':'')
       +'</div>'
       +(!isApproved && (d1H||d2H) ? '<div class="adts">'+d1H+d2H+'</div>' : '')
-      +(a.message?'<div class="amsg">「'+xe(a.message)+'」</div>':'')
+      +(a.message?'<div class="amsg">\u300c'+xe(a.message)+'\u300d</div>':'')
       +approvedSection
     +'</div>'
     +'</div>';
