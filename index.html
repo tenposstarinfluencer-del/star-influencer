@@ -1751,7 +1751,7 @@ function doSaveProf() {
   if (ttUrl && !/^https?:\/\//.test(ttUrl)) { showToast('TikTok URLはhttps://から始めてください','err'); return; }
   dis('btn-save', true, '保存中…');
   gasAuth('updateProfile', TOKEN,
-    cSan(user,50), cSan(ig,100), Number(fw)||0, '',
+    cSan(user,50), cSan(ig,100), Number(fw)||0,
     cSan(ttUser,100), cSan(ttUrl,500),
     Number(gl)||0, Number(tb)||0
   ).then(function(r) {
