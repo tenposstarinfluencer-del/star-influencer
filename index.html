@@ -322,6 +322,11 @@ body.is-sp .cbd{padding:.55rem .75rem}
   border-radius:0 5px 5px 0;padding:4px 8px
 }
 .cng b{margin-right:3px}
+.reg-sec-lbl{
+  font-size:.65rem;font-weight:700;letter-spacing:.12em;color:var(--rose);
+  margin:.85rem 0 .35rem;padding-bottom:.3rem;
+  border-bottom:1px solid rgba(255,255,255,.1)
+}
 .prof-sec-lbl{
   font-size:.65rem;font-weight:700;letter-spacing:.12em;color:var(--rose);
   text-transform:uppercase;margin:.9rem 0 .4rem;padding-bottom:.3rem;
@@ -638,6 +643,8 @@ body.is-pc .toast-dot{display:none}
       </div>
       <!-- 新規登録 -->
       <div id="f-reg" style="display:none">
+        <!-- 基本情報 -->
+        <div class="reg-sec-lbl">基本情報</div>
         <div class="fg">
           <label class="fl" for="r-email">メールアドレス *</label>
           <input id="r-email" class="fi" type="email" autocomplete="email" inputmode="email" placeholder="your@email.com">
@@ -646,22 +653,48 @@ body.is-pc .toast-dot{display:none}
           <label class="fl" for="r-pass">パスワード（8文字以上）*</label>
           <input id="r-pass" class="fi" type="password" autocomplete="new-password" placeholder="••••••••">
         </div>
+        <!-- Instagram -->
+        <div class="reg-sec-lbl">Instagram</div>
         <div class="fg">
-          <label class="fl" for="r-user">ユーザー名（@から始まる）*</label>
-          <input id="r-user" class="fi" type="text" autocomplete="username" placeholder="@yourname">
+          <label class="fl" for="r-user">Instagramユーザー名（@から始まる）*</label>
+          <input id="r-user" class="fi" type="text" autocomplete="off" placeholder="@username">
         </div>
         <div class="fg">
-          <label class="fl" for="r-ig">Instagramアカウント名</label>
-          <input id="r-ig" class="fi" type="text" autocomplete="off" placeholder="yourinstagram">
+          <label class="fl" for="r-ig">アカウント名 *</label>
+          <input id="r-ig" class="fi" type="text" autocomplete="off" placeholder="表示名">
         </div>
         <div class="fi2 fg">
           <div>
-            <label class="fl" for="r-fw">フォロワー数</label>
+            <label class="fl" for="r-fw">フォロワー数 *</label>
             <input id="r-fw" class="fi" type="number" min="0" inputmode="numeric" placeholder="10000">
           </div>
           <div>
-            <label class="fl" for="r-url">URL</label>
-            <input id="r-url" class="fi" type="url" inputmode="url" placeholder="https://...">
+            <label class="fl" for="r-url">Instagram URL *</label>
+            <input id="r-url" class="fi" type="url" inputmode="url" placeholder="https://instagram.com/...">
+          </div>
+        </div>
+        <!-- TikTok -->
+        <div class="reg-sec-lbl">TikTok <span style="font-size:.65rem;opacity:.5;font-weight:400;">任意</span></div>
+        <div class="fi2 fg">
+          <div>
+            <label class="fl" for="r-tt-user">ユーザー名</label>
+            <input id="r-tt-user" class="fi" type="text" autocomplete="off" placeholder="@username">
+          </div>
+          <div>
+            <label class="fl" for="r-tt-url">TikTok URL</label>
+            <input id="r-tt-url" class="fi" type="url" inputmode="url" placeholder="https://tiktok.com/...">
+          </div>
+        </div>
+        <!-- その他 -->
+        <div class="reg-sec-lbl">その他 <span style="font-size:.65rem;opacity:.5;font-weight:400;">任意</span></div>
+        <div class="fi2 fg">
+          <div>
+            <label class="fl" for="r-gl">Google ローカルガイド Lv.</label>
+            <input id="r-gl" class="fi" type="number" min="0" max="10" inputmode="numeric" placeholder="例: 5">
+          </div>
+          <div>
+            <label class="fl" for="r-tb">食べログ フォロワー数</label>
+            <input id="r-tb" class="fi" type="number" min="0" inputmode="numeric" placeholder="例: 500">
           </div>
         </div>
         <div class="fg" style="margin-top:.2rem">
@@ -872,13 +905,9 @@ body.is-pc .toast-dot{display:none}
         <input id="p-user" class="mi" type="text" autocomplete="username" placeholder="@yourname">
       </div>
 
-      <!-- Instagram -->
+      <!-- Instagram（アカウント名・フォロワー数は登録時に設定済み） -->
       <div class="prof-sec-lbl">Instagram</div>
       <div class="pgrid">
-        <div class="fg">
-          <label class="fl" style="color:var(--ink3)" for="p-ig-user">ユーザー名</label>
-          <input id="p-ig-user" class="mi" type="text" autocomplete="off" placeholder="@username">
-        </div>
         <div class="fg">
           <label class="fl" style="color:var(--ink3)" for="p-ig">アカウント名</label>
           <input id="p-ig" class="mi" type="text" autocomplete="off" placeholder="表示名">
@@ -886,10 +915,6 @@ body.is-pc .toast-dot{display:none}
         <div class="fg">
           <label class="fl" style="color:var(--ink3)" for="p-fw">フォロワー数</label>
           <input id="p-fw" class="mi" type="number" min="0" inputmode="numeric" placeholder="10000">
-        </div>
-        <div class="fg">
-          <label class="fl" style="color:var(--ink3)" for="p-ig-url">Instagram URL</label>
-          <input id="p-ig-url" class="mi" type="url" inputmode="url" placeholder="https://instagram.com/...">
         </div>
       </div>
 
@@ -1122,19 +1147,33 @@ function doLogin() {
 }
 
 function doRegister() {
-  var email = gv('r-email'), pass = $('r-pass').value;
-  var user  = gv('r-user'),  ig   = gv('r-ig');
-  var fw    = gv('r-fw'),    url  = gv('r-url');
-  if (!email || !pass || !user)  { showErr('reg','必須項目（*）を入力してください'); return; }
+  var email  = gv('r-email'), pass = $('r-pass').value;
+  var user   = gv('r-user'),  ig   = gv('r-ig');
+  var fw     = gv('r-fw'),    url  = gv('r-url');
+  var ttUser = gv('r-tt-user'), ttUrl = gv('r-tt-url');
+  var gl     = gv('r-gl'),    tb   = gv('r-tb');
+
+  // 必須チェック
+  if (!email || !pass)           { showErr('reg','メールアドレスとパスワードは必須です'); return; }
+  if (!user)                     { showErr('reg','Instagramユーザー名は必須です'); return; }
+  if (!ig)                       { showErr('reg','Instagramアカウント名は必須です'); return; }
+  if (!fw)                       { showErr('reg','Instagramフォロワー数は必須です'); return; }
+  if (!url)                      { showErr('reg','Instagram URLは必須です'); return; }
   if (!$('r-agree').checked)     { showErr('reg','利用規約に同意してください'); return; }
+
+  // 形式チェック
   if (!cEmail(email))            { showErr('reg','メールアドレスの形式が正しくありません'); return; }
   if (pass.length < 8)           { showErr('reg','パスワードは8文字以上で入力してください'); return; }
-  if (!user.startsWith('@'))     { showErr('reg','ユーザー名は@から始めてください'); return; }
-  if (url && !/^https?:\/\//.test(url)) { showErr('reg','URLはhttps://から始めてください'); return; }
+  if (!user.startsWith('@'))     { showErr('reg','Instagramユーザー名は@から始めてください'); return; }
+  if (!/^https?:\/\//.test(url))   { showErr('reg','Instagram URLはhttps://から始めてください'); return; }
+  if (ttUrl && !/^https?:\/\//.test(ttUrl)) { showErr('reg','TikTok URLはhttps://から始めてください'); return; }
+
   dis('btn-reg', true, '登録中…');
   // パスワードは平文でHTTPS送信。ハッシュ化はサーバー側のみで行う。
   gas('registerUser', cSan(email,254), pass,
-    cSan(user,50), cSan(ig,100), Number(fw)||0, cSan(url,500), true).then(function(r) {
+    cSan(user,50), cSan(ig,100), Number(fw)||0, cSan(url,500), true,
+    cSan(ttUser,100), cSan(ttUrl,500), Number(gl)||0, Number(tb)||0
+  ).then(function(r) {
     if (r && r.success) {
       saveSession(r.token, r.user, $('l-keep').checked); enterApp();
     } else {
@@ -1687,38 +1726,32 @@ function makeApp(a, i) {
 // ============================================================
 function openProfile() {
   if (!U) return;
-  $('p-email').textContent  = U.email||'';
-  $('p-user').value         = U.username||'';
-  $('p-ig-user').value      = U.igUsername||'';
-  $('p-ig').value           = U.igName||'';
-  $('p-fw').value           = U.followers||'';
-  $('p-ig-url').value       = U.igUrl||'';
-  $('p-tt-user').value      = U.ttUsername||'';
-  $('p-tt-url').value       = U.ttUrl||'';
-  $('p-gl').value           = U.glLv||'';
-  $('p-tb').value           = U.tbFollowers||'';
+  $('p-email').textContent = U.email||'';
+  $('p-user').value        = U.username||'';
+  $('p-ig').value          = U.igName||'';
+  $('p-fw').value          = U.followers||'';
+  $('p-tt-user').value     = U.ttUsername||'';
+  $('p-tt-url').value      = U.ttUrl||'';
+  $('p-gl').value          = U.glLv||'';
+  $('p-tb').value          = U.tbFollowers||'';
   var bp = $('bn-prof'); if (bp) bp.classList.add('on');
   openMod('mod-prof');
 }
 
 function doSaveProf() {
-  var user   = gv('p-user');
-  var ig     = gv('p-ig');
-  var fw     = gv('p-fw');
-  var igUser = gv('p-ig-user');
-  var igUrl  = gv('p-ig-url');
+  var user  = gv('p-user');
+  var ig    = gv('p-ig');
+  var fw    = gv('p-fw');
   var ttUser = gv('p-tt-user');
   var ttUrl  = gv('p-tt-url');
-  var gl     = gv('p-gl');
-  var tb     = gv('p-tb');
-  if (!user)                              { showToast('ユーザー名を入力してください','err'); return; }
-  if (!user.startsWith('@'))              { showToast('ユーザー名は@から始めてください','err'); return; }
-  if (igUrl && !/^https?:\/\//.test(igUrl)) { showToast('Instagram URLはhttps://から始めてください','err'); return; }
+  var gl    = gv('p-gl');
+  var tb    = gv('p-tb');
+  if (!user)                             { showToast('ユーザー名を入力してください','err'); return; }
+  if (!user.startsWith('@'))             { showToast('ユーザー名は@から始めてください','err'); return; }
   if (ttUrl && !/^https?:\/\//.test(ttUrl)) { showToast('TikTok URLはhttps://から始めてください','err'); return; }
   dis('btn-save', true, '保存中…');
   gasAuth('updateProfile', TOKEN,
     cSan(user,50), cSan(ig,100), Number(fw)||0, '',
-    cSan(igUser,100), cSan(igUrl,500),
     cSan(ttUser,100), cSan(ttUrl,500),
     Number(gl)||0, Number(tb)||0
   ).then(function(r) {
