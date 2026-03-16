@@ -322,6 +322,11 @@ body.is-sp .cbd{padding:.55rem .75rem}
   border-radius:0 5px 5px 0;padding:4px 8px
 }
 .cng b{margin-right:3px}
+.prof-sec-lbl{
+  font-size:.65rem;font-weight:700;letter-spacing:.12em;color:var(--rose);
+  text-transform:uppercase;margin:.9rem 0 .4rem;padding-bottom:.3rem;
+  border-bottom:1px solid var(--border)
+}
 .cft{
   padding:.55rem .75rem .55rem .9rem;border-top:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;gap:.4rem;
@@ -859,24 +864,61 @@ body.is-pc .toast-dot{display:none}
         <div style="font-size:.72rem;color:var(--ink3);margin-bottom:.18rem">メールアドレス</div>
         <div id="p-email" style="font-size:.9rem"></div>
       </div>
+
+      <!-- 基本情報 -->
+      <div class="prof-sec-lbl">基本情報</div>
+      <div class="fg">
+        <label class="fl" style="color:var(--ink3)" for="p-user">ユーザー名（@始まり）</label>
+        <input id="p-user" class="mi" type="text" autocomplete="username" placeholder="@yourname">
+      </div>
+
+      <!-- Instagram -->
+      <div class="prof-sec-lbl">Instagram</div>
       <div class="pgrid">
         <div class="fg">
-          <label class="fl" style="color:var(--ink3)" for="p-user">ユーザー名（@始まり）</label>
-          <input id="p-user" class="mi" type="text" autocomplete="username" placeholder="@yourname">
+          <label class="fl" style="color:var(--ink3)" for="p-ig-user">ユーザー名</label>
+          <input id="p-ig-user" class="mi" type="text" autocomplete="off" placeholder="@username">
         </div>
         <div class="fg">
-          <label class="fl" style="color:var(--ink3)" for="p-ig">Instagramアカウント名</label>
-          <input id="p-ig" class="mi" type="text" autocomplete="off" placeholder="yourinstagram">
+          <label class="fl" style="color:var(--ink3)" for="p-ig">アカウント名</label>
+          <input id="p-ig" class="mi" type="text" autocomplete="off" placeholder="表示名">
         </div>
         <div class="fg">
           <label class="fl" style="color:var(--ink3)" for="p-fw">フォロワー数</label>
-          <input id="p-fw" class="mi" type="number" min="0" inputmode="numeric">
+          <input id="p-fw" class="mi" type="number" min="0" inputmode="numeric" placeholder="10000">
         </div>
         <div class="fg">
-          <label class="fl" style="color:var(--ink3)" for="p-url">URL</label>
-          <input id="p-url" class="mi" type="url" inputmode="url" placeholder="https://...">
+          <label class="fl" style="color:var(--ink3)" for="p-ig-url">Instagram URL</label>
+          <input id="p-ig-url" class="mi" type="url" inputmode="url" placeholder="https://instagram.com/...">
         </div>
       </div>
+
+      <!-- TikTok -->
+      <div class="prof-sec-lbl">TikTok</div>
+      <div class="pgrid">
+        <div class="fg">
+          <label class="fl" style="color:var(--ink3)" for="p-tt-user">ユーザー名</label>
+          <input id="p-tt-user" class="mi" type="text" autocomplete="off" placeholder="@username">
+        </div>
+        <div class="fg">
+          <label class="fl" style="color:var(--ink3)" for="p-tt-url">TikTok URL</label>
+          <input id="p-tt-url" class="mi" type="url" inputmode="url" placeholder="https://tiktok.com/...">
+        </div>
+      </div>
+
+      <!-- その他 -->
+      <div class="prof-sec-lbl">その他</div>
+      <div class="pgrid">
+        <div class="fg">
+          <label class="fl" style="color:var(--ink3)" for="p-gl">Google ローカルガイド Lv.</label>
+          <input id="p-gl" class="mi" type="number" min="0" max="10" inputmode="numeric" placeholder="例: 5">
+        </div>
+        <div class="fg">
+          <label class="fl" style="color:var(--ink3)" for="p-tb">食べログ フォロワー数</label>
+          <input id="p-tb" class="mi" type="number" min="0" inputmode="numeric" placeholder="例: 500">
+        </div>
+      </div>
+
       <div class="sec-div">ログアウト</div>
       <button onclick="doLogout()" style="width:100%;padding:14px;background:none;border:1px solid var(--border);border-radius:var(--rs);font-family:'DM Sans',sans-serif;font-size:.9rem;color:var(--ink3);cursor:pointer;min-height:50px;touch-action:manipulation;">
         ログアウトする
@@ -1645,23 +1687,41 @@ function makeApp(a, i) {
 // ============================================================
 function openProfile() {
   if (!U) return;
-  $('p-email').textContent = U.email||'';
-  $('p-user').value = U.username||'';
-  $('p-ig').value   = U.igName||'';
-  $('p-fw').value   = U.followers||'';
-  $('p-url').value  = U.url||'';
+  $('p-email').textContent  = U.email||'';
+  $('p-user').value         = U.username||'';
+  $('p-ig-user').value      = U.igUsername||'';
+  $('p-ig').value           = U.igName||'';
+  $('p-fw').value           = U.followers||'';
+  $('p-ig-url').value       = U.igUrl||'';
+  $('p-tt-user').value      = U.ttUsername||'';
+  $('p-tt-url').value       = U.ttUrl||'';
+  $('p-gl').value           = U.glLv||'';
+  $('p-tb').value           = U.tbFollowers||'';
   var bp = $('bn-prof'); if (bp) bp.classList.add('on');
   openMod('mod-prof');
 }
 
 function doSaveProf() {
-  var user=gv('p-user'), ig=gv('p-ig'), fw=gv('p-fw'), url=gv('p-url');
-  if (!user)                        { showToast('ユーザー名を入力してください','err'); return; }
-  if (!user.startsWith('@'))        { showToast('ユーザー名は@から始めてください','err'); return; }
-  if (url && !/^https?:\/\//.test(url)) { showToast('URLはhttps://から始めてください','err'); return; }
+  var user   = gv('p-user');
+  var ig     = gv('p-ig');
+  var fw     = gv('p-fw');
+  var igUser = gv('p-ig-user');
+  var igUrl  = gv('p-ig-url');
+  var ttUser = gv('p-tt-user');
+  var ttUrl  = gv('p-tt-url');
+  var gl     = gv('p-gl');
+  var tb     = gv('p-tb');
+  if (!user)                              { showToast('ユーザー名を入力してください','err'); return; }
+  if (!user.startsWith('@'))              { showToast('ユーザー名は@から始めてください','err'); return; }
+  if (igUrl && !/^https?:\/\//.test(igUrl)) { showToast('Instagram URLはhttps://から始めてください','err'); return; }
+  if (ttUrl && !/^https?:\/\//.test(ttUrl)) { showToast('TikTok URLはhttps://から始めてください','err'); return; }
   dis('btn-save', true, '保存中…');
-  gasAuth('updateProfile', TOKEN, cSan(user,50), cSan(ig,100), Number(fw)||0, cSan(url,500))
-  .then(function(r) {
+  gasAuth('updateProfile', TOKEN,
+    cSan(user,50), cSan(ig,100), Number(fw)||0, '',
+    cSan(igUser,100), cSan(igUrl,500),
+    cSan(ttUser,100), cSan(ttUrl,500),
+    Number(gl)||0, Number(tb)||0
+  ).then(function(r) {
     if (r && r.success) {
       U = r.user;
       var n = U.username||U.email;
