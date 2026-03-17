@@ -322,6 +322,20 @@ body.is-sp .cbd{padding:.55rem .75rem}
   border-radius:0 5px 5px 0;padding:4px 8px
 }
 .cng b{margin-right:3px}
+/* ローディングスピナー */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{
+  width:16px;height:16px;border-radius:50%;flex-shrink:0;
+  border:2px solid var(--border);
+  border-top-color:var(--rose);
+  animation:spin .7s linear infinite
+}
+.spin-lg{
+  width:28px;height:28px;
+  border:3px solid var(--border);
+  border-top-color:var(--rose);
+  border-radius:50%;animation:spin .7s linear infinite
+}
 .reg-sec-lbl{
   font-size:.65rem;font-weight:700;letter-spacing:.12em;color:var(--rose);
   margin:.85rem 0 .35rem;padding-bottom:.3rem;
@@ -751,7 +765,7 @@ body.is-pc .toast-dot{display:none}
       </div>
     </div>
     <div class="grid" id="cgrid">
-      <div class="empty"><div class="empty-i">⏳</div><div class="empty-t">読み込み中…</div></div>
+      <div style="display:flex;justify-content:center;padding:3rem 0"><div class="spin-lg"></div></div>
     </div>
   </div>
 </div>
@@ -767,7 +781,7 @@ body.is-pc .toast-dot{display:none}
       <button class="ftag"    id="af-rejected" onclick="setAF('rejected',this)">❌ 不採用</button>
     </div>
     <div class="alist" id="alist">
-      <div class="empty"><div class="empty-i">⏳</div><div class="empty-t">読み込み中…</div></div>
+      <div style="display:flex;justify-content:center;padding:3rem 0"><div class="spin-lg"></div></div>
     </div>
   </div>
 </div>
@@ -1241,7 +1255,7 @@ function goPage(p) {
 //  CASES
 // ============================================================
 function loadCases() {
-  $('cgrid').innerHTML = emptyHTML('⏳','読み込み中…','');
+  $('cgrid').innerHTML = '<div style="display:flex;justify-content:center;padding:3rem 0"><div class="spin-lg"></div></div>';
   gasAuth('getCasesWithApplied', TOKEN)
   .then(function(r) {
     CASES   = (r && r.cases)   || [];
@@ -1529,10 +1543,26 @@ function renderApps() {
     return;
   }
   $('alist').innerHTML = list.map(function(a,i){ return makeApp(a,i); }).join('');
+  // data属性ボタンにイベントを付与
+  document.querySelectorAll('.js-post-url-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() { doSubmitPostUrl(this.dataset.appid); });
+  });
+  document.querySelectorAll('.js-insight-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var f = document.getElementById('insight-file-' + this.dataset.appid);
+      if (f) f.click();
+    });
+  });
+  document.querySelectorAll('[id^="insight-file-"]').forEach(function(input) {
+    input.addEventListener('change', function() {
+      var appId = this.id.replace('insight-file-', '');
+      doSubmitInsight(appId);
+    });
+  });
 }
 
 function loadApps() {
-  $('alist').innerHTML = emptyHTML('⏳','読み込み中…','');
+  $('alist').innerHTML = '<div style="display:flex;justify-content:center;padding:3rem 0"><div class="spin-lg"></div></div>';
   // フィルターをリセット
   APP_FILTER = 'all';
   document.querySelectorAll('#pg-apps .ftag').forEach(function(b){ b.classList.remove('on'); });
@@ -1665,7 +1695,7 @@ function doSubmitInsight(appId) {
   var file = fileInput.files[0];
   if (file.size > 5 * 1024 * 1024) { showToast('5MB以下の画像を選択してください','err'); return; }
   if (btn)  { btn.style.display = 'none'; }
-  if (prog) { prog.style.display = 'block'; }
+  if (prog) { prog.style.display = 'flex'; }
   var reader = new FileReader();
   reader.onload = function(e) {
     // base64のヘッダー部分を除去
@@ -1741,7 +1771,7 @@ function makeApp(a, i) {
 
     var appId = xe(a.applicationId);
 
-    // 投稿URL提出エリア
+    // 投稿URL提出エリア（data属性方式でonclick不要）
     var postUrlHtml = visited
       ? '<div style="margin-top:.55rem">'
           +'<div style="font-size:.65rem;color:var(--sage);font-weight:700;letter-spacing:.1em;margin-bottom:.3rem">📝 投稿URL</div>'
@@ -1750,7 +1780,7 @@ function makeApp(a, i) {
             : '<div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;">'
                 +'<input id="post-url-'+appId+'" type="url" placeholder="https://www.instagram.com/p/..." '
                   +'style="flex:1;min-width:0;height:36px;padding:0 .6rem;border:1px solid var(--border);border-radius:var(--rs);background:var(--paper);color:var(--ink);font-size:.8rem;">'
-                +'<button onclick="doSubmitPostUrl(\\\''+appId+'\\\')" id="post-url-btn-'+appId+'" '
+                +'<button class="js-post-url-btn" data-appid="'+appId+'" id="post-url-btn-'+appId+'" '
                   +'style="height:36px;padding:0 14px;background:var(--sage);color:#fff;border:none;border-radius:var(--rs);font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;touch-action:manipulation;">'
                   +'送信</button>'
               +'</div>'
@@ -1758,7 +1788,7 @@ function makeApp(a, i) {
         +'</div>'
       : '';
 
-    // インサイト提出エリア
+    // インサイト提出エリア（data属性方式）
     var insightHtml = visited
       ? '<div style="margin-top:.55rem">'
           +'<div style="font-size:.65rem;color:var(--sage);font-weight:700;letter-spacing:.1em;margin-bottom:.3rem">📊 インサイト提出</div>'
@@ -1767,14 +1797,17 @@ function makeApp(a, i) {
                 +'style="display:inline-flex;align-items:center;gap:4px;font-size:.8rem;color:var(--sage);font-weight:600;">'
                 +'✅ 提出済み（タップして確認）</a>'
             : '<div>'
-                +'<input id="insight-file-'+appId+'" type="file" accept="image/*" style="display:none;" onchange="doSubmitInsight(\\\''+appId+'\\\')">'
-                +'<button onclick="document.getElementById(\\\'insight-file-'+appId+'\\\').click()" id="insight-btn-'+appId+'" '
+                +'<input id="insight-file-'+appId+'" type="file" accept="image/*" style="display:none;">'
+                +'<button class="js-insight-btn" data-appid="'+appId+'" id="insight-btn-'+appId+'" '
                   +'style="display:inline-flex;align-items:center;gap:5px;height:36px;padding:0 14px;'
                   +'background:var(--paper);border:1px solid var(--sage);color:var(--sage);'
                   +'border-radius:var(--rs);font-size:.78rem;font-weight:600;cursor:pointer;touch-action:manipulation;">'
                   +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
                   +'スクリーンショットを送る</button>'
-                +'<div id="insight-prog-'+appId+'" style="font-size:.75rem;color:var(--ink3);margin-top:.3rem;display:none;">アップロード中…</div>'
+                +'<div id="insight-prog-'+appId+'" style="display:none;align-items:center;gap:6px;margin-top:.4rem;">'
+                  +'<div class="spin"></div>'
+                  +'<span style="font-size:.75rem;color:var(--ink3);">アップロード中…</span>'
+                +'</div>'
               +'</div>'
           )
         +'</div>'
