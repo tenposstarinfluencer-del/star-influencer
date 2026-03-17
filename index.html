@@ -1547,17 +1547,7 @@ function renderApps() {
   document.querySelectorAll('.js-post-url-btn').forEach(function(btn) {
     btn.addEventListener('click', function() { doSubmitPostUrl(this.dataset.appid); });
   });
-  document.querySelectorAll('.js-insight-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      var f = document.getElementById('insight-file-' + this.dataset.appid);
-      if (f) f.click();
-    });
   });
-  document.querySelectorAll('[id^="insight-file-"]').forEach(function(input) {
-    input.addEventListener('change', function() {
-      var appId = this.id.replace('insight-file-', '');
-      doSubmitInsight(appId);
-    });
   });
 }
 
@@ -1687,40 +1677,6 @@ function doSubmitPostUrl(appId) {
   });
 }
 
-function doSubmitInsight(appId) {
-  var fileInput = document.getElementById('insight-file-' + appId);
-  var btn       = document.getElementById('insight-btn-' + appId);
-  var prog      = document.getElementById('insight-prog-' + appId);
-  if (!fileInput || !fileInput.files[0]) return;
-  var file = fileInput.files[0];
-  if (file.size > 5 * 1024 * 1024) { showToast('5MB以下の画像を選択してください','err'); return; }
-  if (btn)  { btn.style.display = 'none'; }
-  if (prog) { prog.style.display = 'flex'; }
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    // base64のヘッダー部分を除去
-    var base64 = e.target.result.split(',')[1];
-    gasAuth('submitInsight', TOKEN, appId, base64)
-    .then(function(r) {
-      if (r && r.success) {
-        for (var i = 0; i < ALL_APPS.length; i++) {
-          if (ALL_APPS[i].applicationId === appId) { ALL_APPS[i].insightUrl = r.insightUrl; break; }
-        }
-        renderApps();
-        showToast('インサイトを提出しました ✅','ok');
-      } else {
-        showToast((r&&r.message)||'エラーが発生しました','err');
-        if (btn)  { btn.style.display = ''; }
-        if (prog) { prog.style.display = 'none'; }
-      }
-    }).catch(function(err) {
-      if (err !== 'SESSION_EXPIRED') showToast('エラーが発生しました','err');
-      if (btn)  { btn.style.display = ''; }
-      if (prog) { prog.style.display = 'none'; }
-    });
-  };
-  reader.readAsDataURL(file);
-}
 
 function fmtAppliedAt(str) {
   if (!str) return '';
@@ -1783,31 +1739,6 @@ function makeApp(a, i) {
                 +'<button class="js-post-url-btn" data-appid="'+appId+'" id="post-url-btn-'+appId+'" '
                   +'style="height:36px;padding:0 14px;background:var(--sage);color:#fff;border:none;border-radius:var(--rs);font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;touch-action:manipulation;">'
                   +'送信</button>'
-              +'</div>'
-          )
-        +'</div>'
-      : '';
-
-    // インサイト提出エリア（data属性方式）
-    var insightHtml = '';
-      ? '<div style="margin-top:.55rem">'
-          +'<div style="font-size:.65rem;color:var(--sage);font-weight:700;letter-spacing:.1em;margin-bottom:.3rem">📊 インサイト提出</div>'
-          +(a.insightUrl
-            ? '<a href="'+xe(a.insightUrl)+'" target="_blank" rel="noopener noreferrer" '
-                +'style="display:inline-flex;align-items:center;gap:4px;font-size:.8rem;color:var(--sage);font-weight:600;">'
-                +'✅ 提出済み（タップして確認）</a>'
-            : '<div>'
-                +'<input id="insight-file-'+appId+'" type="file" accept="image/*" style="display:none;">'
-                +'<button class="js-insight-btn" data-appid="'+appId+'" id="insight-btn-'+appId+'" '
-                  +'style="display:inline-flex;align-items:center;gap:5px;height:36px;padding:0 14px;'
-                  +'background:var(--paper);border:1px solid var(--sage);color:var(--sage);'
-                  +'border-radius:var(--rs);font-size:.78rem;font-weight:600;cursor:pointer;touch-action:manipulation;">'
-                  +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
-                  +'スクリーンショットを送る</button>'
-                +'<div id="insight-prog-'+appId+'" style="display:none;align-items:center;gap:6px;margin-top:.4rem;">'
-                  +'<div class="spin"></div>'
-                  +'<span style="font-size:.75rem;color:var(--ink3);">アップロード中…</span>'
-                +'</div>'
               +'</div>'
           )
         +'</div>'
