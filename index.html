@@ -1789,7 +1789,7 @@ function makeApp(a, i) {
       : '';
 
     // インサイト提出エリア（data属性方式）
-    var insightHtml = visited
+    var insightHtml = '';
       ? '<div style="margin-top:.55rem">'
           +'<div style="font-size:.65rem;color:var(--sage);font-weight:700;letter-spacing:.1em;margin-bottom:.3rem">📊 インサイト提出</div>'
           +(a.insightUrl
@@ -1835,7 +1835,6 @@ function makeApp(a, i) {
           +visitedLbl
         +'</div>'
         +postUrlHtml
-        +insightHtml
       +'</div>';
   }
 
