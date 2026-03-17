@@ -1631,6 +1631,67 @@ function doVisit(appId) {
   });
 }
 
+function doSubmitPostUrl(appId) {
+  var input = document.getElementById('post-url-' + appId);
+  var btn   = document.getElementById('post-url-btn-' + appId);
+  if (!input) return;
+  var url = input.value.trim();
+  if (!url) { showToast('投稿URLを入力してください','err'); return; }
+  if (!/^https?:\/\//.test(url)) { showToast('URLはhttps://から始めてください','err'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = '送信中…'; }
+  gasAuth('submitPostUrl', TOKEN, appId, url)
+  .then(function(r) {
+    if (r && r.success) {
+      for (var i = 0; i < ALL_APPS.length; i++) {
+        if (ALL_APPS[i].applicationId === appId) { ALL_APPS[i].postUrl = r.postUrl; break; }
+      }
+      renderApps();
+      showToast('投稿URLを提出しました ✅','ok');
+    } else {
+      showToast((r&&r.message)||'エラーが発生しました','err');
+      if (btn) { btn.disabled = false; btn.textContent = '送信'; }
+    }
+  }).catch(function(err) {
+    if (err !== 'SESSION_EXPIRED') showToast('エラーが発生しました','err');
+    if (btn) { btn.disabled = false; btn.textContent = '送信'; }
+  });
+}
+
+function doSubmitInsight(appId) {
+  var fileInput = document.getElementById('insight-file-' + appId);
+  var btn       = document.getElementById('insight-btn-' + appId);
+  var prog      = document.getElementById('insight-prog-' + appId);
+  if (!fileInput || !fileInput.files[0]) return;
+  var file = fileInput.files[0];
+  if (file.size > 5 * 1024 * 1024) { showToast('5MB以下の画像を選択してください','err'); return; }
+  if (btn)  { btn.style.display = 'none'; }
+  if (prog) { prog.style.display = 'block'; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    // base64のヘッダー部分を除去
+    var base64 = e.target.result.split(',')[1];
+    gasAuth('submitInsight', TOKEN, appId, base64)
+    .then(function(r) {
+      if (r && r.success) {
+        for (var i = 0; i < ALL_APPS.length; i++) {
+          if (ALL_APPS[i].applicationId === appId) { ALL_APPS[i].insightUrl = r.insightUrl; break; }
+        }
+        renderApps();
+        showToast('インサイトを提出しました ✅','ok');
+      } else {
+        showToast((r&&r.message)||'エラーが発生しました','err');
+        if (btn)  { btn.style.display = ''; }
+        if (prog) { prog.style.display = 'none'; }
+      }
+    }).catch(function(err) {
+      if (err !== 'SESSION_EXPIRED') showToast('エラーが発生しました','err');
+      if (btn)  { btn.style.display = ''; }
+      if (prog) { prog.style.display = 'none'; }
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
 function fmtAppliedAt(str) {
   if (!str) return '';
   // GASから「yyyy/MM/dd HH:mm」形式で来る
@@ -1678,6 +1739,47 @@ function makeApp(a, i) {
         +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="14" height="14"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'
         +'店舗に到着</button>';
 
+    var appId = xe(a.applicationId);
+
+    // 投稿URL提出エリア
+    var postUrlHtml = visited
+      ? '<div style="margin-top:.55rem">'
+          +'<div style="font-size:.65rem;color:var(--sage);font-weight:700;letter-spacing:.1em;margin-bottom:.3rem">📝 投稿URL</div>'
+          +(a.postUrl
+            ? '<a href="'+xe(a.postUrl)+'" target="_blank" rel="noopener noreferrer" style="font-size:.8rem;color:var(--rose);word-break:break-all;">'+xe(a.postUrl)+'</a>'
+            : '<div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;">'
+                +'<input id="post-url-'+appId+'" type="url" placeholder="https://www.instagram.com/p/..." '
+                  +'style="flex:1;min-width:0;height:36px;padding:0 .6rem;border:1px solid var(--border);border-radius:var(--rs);background:var(--paper);color:var(--ink);font-size:.8rem;">'
+                +'<button onclick="doSubmitPostUrl(\\\''+appId+'\\\')" id="post-url-btn-'+appId+'" '
+                  +'style="height:36px;padding:0 14px;background:var(--sage);color:#fff;border:none;border-radius:var(--rs);font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;touch-action:manipulation;">'
+                  +'送信</button>'
+              +'</div>'
+          )
+        +'</div>'
+      : '';
+
+    // インサイト提出エリア
+    var insightHtml = visited
+      ? '<div style="margin-top:.55rem">'
+          +'<div style="font-size:.65rem;color:var(--sage);font-weight:700;letter-spacing:.1em;margin-bottom:.3rem">📊 インサイト提出</div>'
+          +(a.insightUrl
+            ? '<a href="'+xe(a.insightUrl)+'" target="_blank" rel="noopener noreferrer" '
+                +'style="display:inline-flex;align-items:center;gap:4px;font-size:.8rem;color:var(--sage);font-weight:600;">'
+                +'✅ 提出済み（タップして確認）</a>'
+            : '<div>'
+                +'<input id="insight-file-'+appId+'" type="file" accept="image/*" style="display:none;" onchange="doSubmitInsight(\\\''+appId+'\\\')">'
+                +'<button onclick="document.getElementById(\\\'insight-file-'+appId+'\\\').click()" id="insight-btn-'+appId+'" '
+                  +'style="display:inline-flex;align-items:center;gap:5px;height:36px;padding:0 14px;'
+                  +'background:var(--paper);border:1px solid var(--sage);color:var(--sage);'
+                  +'border-radius:var(--rs);font-size:.78rem;font-weight:600;cursor:pointer;touch-action:manipulation;">'
+                  +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
+                  +'スクリーンショットを送る</button>'
+                +'<div id="insight-prog-'+appId+'" style="font-size:.75rem;color:var(--ink3);margin-top:.3rem;display:none;">アップロード中…</div>'
+              +'</div>'
+          )
+        +'</div>'
+      : '';
+
     approvedSection =
       '<div style="margin-top:.6rem;background:var(--sage-light);border:1px solid rgba(107,143,113,.3);border-radius:var(--rs);padding:.65rem .85rem;">'
         +'<div style="font-size:.65rem;color:var(--sage);font-weight:700;letter-spacing:.1em;margin-bottom:.35rem">✅ 来店確定日時</div>'
@@ -1699,6 +1801,8 @@ function makeApp(a, i) {
           +'</a>'
           +visitedLbl
         +'</div>'
+        +postUrlHtml
+        +insightHtml
       +'</div>';
   }
 
