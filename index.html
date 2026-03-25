@@ -623,8 +623,8 @@ body.is-pc .toast-dot{display:none}
 <!-- LOADER -->
 <div id="loader">
   <div>
-    <div class="lb-brand">TENPOS INFLUENCER <em>PR</em></div>
-    <div class="lb-sub">インフルエンサー × PR案件マッチング</div>
+    <div class="lb-brand">INFLUENCER <em>PR</em></div>
+    <div class="lb-sub">テンポスPR案件掲示板</div>
     <div class="lb-bar"><div class="lb-fill"></div></div>
   </div>
 </div>
@@ -633,8 +633,8 @@ body.is-pc .toast-dot{display:none}
 <div id="auth-page">
   <div class="auth-wrap">
     <div class="auth-brand">
-      <div class="auth-logo">TENPOS INFLUENCER <em>PR</em></div>
-      <div class="auth-tagline">インフルエンサー × PR案件マッチング</div>
+      <div class="auth-logo">INFLUENCER <em>PR</em></div>
+      <div class="auth-tagline">テンポスPR案件掲示板</div>
     </div>
     <div class="auth-box">
       <div class="atabs">
@@ -756,7 +756,7 @@ body.is-pc .toast-dot{display:none}
 <div id="pg-cases" class="pg">
   <div class="wrap">
     <div class="prow">
-      <h1 class="ptitle">PR案件一覧</h1>
+      <h1 class="ptitle">案件一覧</h1>
       <span class="pcount" id="pcnt"></span>
     </div>
     <div class="fbar">
@@ -1425,8 +1425,8 @@ function openApply(id, store, loc, availableDays, availableTime) {
   $('m-d2-btn').textContent = '日付を選択';
   $('m-d2-btn').style.color = 'var(--ink3)';
 
-  // 30分刻みセレクトを生成して m-t1, m-t2 にセット
-  buildTimeSelects(availableTime || '');
+  // 30分刻みセレクトを生成（時間帯制限なし）
+  buildTimeSelects();
 
   // 来店可能曜日の注記
   if (CAL_ALLOWED && availableDays) {
@@ -1435,7 +1435,7 @@ function openApply(id, store, loc, availableDays, availableTime) {
   } else {
     $('avail-days-note').style.display = 'none';
   }
-  // 来店可能時間の注記
+  // 来店可能時間は参考表示のみ（制限はしない）
   if (availableTime) {
     $('avail-time-label').textContent = availableTime;
     $('avail-time-note').style.display = 'block';
@@ -1446,35 +1446,23 @@ function openApply(id, store, loc, availableDays, availableTime) {
 }
 
 // 30分刻みのselectを生成（来店可能時間があれば範囲を絞る）
-function buildTimeSelects(availableTime) {
-  // 来店可能時間から start/end を解析（例: "11:00〜20:00" "11:00-20:00"）
-  var startH = 9, endH = 22; // デフォルト 9:00〜22:00
-  var m = availableTime.match(/(\d{1,2}):?(\d{2})?\s*[〜~\-～]\s*(\d{1,2}):?(\d{2})?/);
-  if (m) {
-    startH = parseInt(m[1], 10);
-    endH   = parseInt(m[3], 10);
-    // 分指定があれば考慮（例: 11:30〜）
-  }
-
+function buildTimeSelects() {
+  // 9:00〜22:00 の30分刻み（時間帯制限なし）
   var opts = '<option value="">時間を選択</option>';
-  for (var h = startH; h < endH; h++) {
+  for (var h = 9; h <= 23; h++) {
     opts += '<option value="' + pad(h) + ':00">' + pad(h) + ':00</option>';
-    opts += '<option value="' + pad(h) + ':30">' + pad(h) + ':30</option>';
+    if (h < 23)
+      opts += '<option value="' + pad(h) + ':30">' + pad(h) + ':30</option>';
   }
-  // 終了時刻ちょうども追加
-  opts += '<option value="' + pad(endH) + ':00">' + pad(endH) + ':00</option>';
-
-  // m-t1, m-t2 の input を select に差し替え（またはselectを更新）
+  opts += '<option value="23:30">23:30</option>';
   ['m-t1','m-t2'].forEach(function(id) {
     var el = $(id);
     if (!el) return;
-    // select に変換（まだinputなら置き換え）
     if (el.tagName === 'SELECT') {
       el.innerHTML = opts;
     } else {
       var sel = document.createElement('select');
-      sel.id        = id;
-      sel.className = el.className;
+      sel.id = id; sel.className = el.className;
       sel.innerHTML = opts;
       el.parentNode.replaceChild(sel, el);
     }
