@@ -450,6 +450,11 @@ body.is-pc .mdr{grid-template-columns:1fr 1fr}
   -webkit-appearance:none;appearance:none
 }
 .mi:focus{border-color:var(--rose)}
+select.mi{
+  padding-right:2rem;cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right .75rem center
+}
 .mlbl{font-size:.78rem;font-weight:600;letter-spacing:.07em;color:var(--ink2);margin-bottom:.38rem}
 .mta{
   width:100%;border:1px solid var(--border);border-radius:var(--rs);
@@ -618,7 +623,7 @@ body.is-pc .toast-dot{display:none}
 <!-- LOADER -->
 <div id="loader">
   <div>
-    <div class="lb-brand">TENPOS<em>INFLUENCER PR</em></div>
+    <div class="lb-brand">TENPOS INFLUENCER <em>PR</em></div>
     <div class="lb-sub">インフルエンサー × PR案件マッチング</div>
     <div class="lb-bar"><div class="lb-fill"></div></div>
   </div>
@@ -628,7 +633,7 @@ body.is-pc .toast-dot{display:none}
 <div id="auth-page">
   <div class="auth-wrap">
     <div class="auth-brand">
-      <div class="auth-logo">TENPOS<em>INFLUENCER PR</em></div>
+      <div class="auth-logo">TENPOS INFLUENCER <em>PR</em></div>
       <div class="auth-tagline">インフルエンサー × PR案件マッチング</div>
     </div>
     <div class="auth-box">
@@ -828,8 +833,11 @@ body.is-pc .toast-dot{display:none}
       <div class="msb" id="m-loc"></div>
       <div class="mds">
         <div class="mds-t">📅 来店日程候補（最大2つ）</div>
-        <div id="avail-days-note" style="font-size:.72rem;color:var(--rose);margin-bottom:.6rem;display:none">
+        <div id="avail-days-note" style="font-size:.72rem;color:var(--rose);margin-bottom:.35rem;display:none">
           ⚠ 来店可能曜日のみ選択できます：<span id="avail-days-label"></span>
+        </div>
+        <div id="avail-time-note" style="font-size:.72rem;color:var(--rose);margin-bottom:.6rem;display:none">
+          🕐 来店可能時間：<span id="avail-time-label"></span>
         </div>
         <div class="mdr">
           <div>
@@ -839,7 +847,7 @@ body.is-pc .toast-dot{display:none}
           </div>
           <div>
             <div class="mdl"><span class="mdn">1</span>第1希望 — 時間</div>
-            <input class="mi" id="m-t1" type="time">
+            <select class="mi" id="m-t1"><option value="">時間を選択</option></select>
           </div>
         </div>
         <div class="mdr">
@@ -850,7 +858,7 @@ body.is-pc .toast-dot{display:none}
           </div>
           <div>
             <div class="mdl"><span class="mdn">2</span>第2希望 — 時間</div>
-            <input class="mi" id="m-t2" type="time">
+            <select class="mi" id="m-t2"><option value="">時間を選択</option></select>
           </div>
         </div>
       </div>
@@ -1337,7 +1345,7 @@ function makeCard(c, i) {
   var apBtn;
   if (closed)       apBtn = '<button class="btn-ap" disabled>締め切り</button>';
   else if (applied) apBtn = '<button class="btn-ap" disabled>応募済み</button>';
-  else apBtn = '<button class="btn-ap" data-id="'+xe(c.id)+'" data-store="'+xe(c.storeName||'')+'" data-loc="'+xe(locTxt)+'" data-days="'+xe(c.availableDays||'')+'" onclick="openApplyFromBtn(this)">応募する →</button>';
+  else apBtn = '<button class="btn-ap" data-id="'+xe(c.id)+'" data-store="'+xe(c.storeName||'')+'" data-loc="'+xe(locTxt)+'" data-days="'+xe(c.availableDays||'')+'" data-time="'+xe(c.availableTime||'')+'" onclick="openApplyFromBtn(this)">応募する →</button>';
 
   return '<div class="card" style="animation-delay:'+delay+'s">'
     +'<div class="card-inner">'
@@ -1401,20 +1409,25 @@ function openApplyFromBtn(btn) {
     btn.dataset.id,
     btn.dataset.store,
     btn.dataset.loc,
-    btn.dataset.days
+    btn.dataset.days,
+    btn.dataset.time
   );
 }
 
-function openApply(id, store, loc, availableDays) {
+function openApply(id, store, loc, availableDays, availableTime) {
   PENDING     = id;
   CAL_ALLOWED = parseAllowedDays(availableDays || '');
   $('m-store').textContent = store;
   $('m-loc').textContent   = loc;
-  ['m-d1','m-t1','m-d2','m-t2','m-msg'].forEach(function(el){ $(el).value=''; });
+  ['m-d1','m-d2','m-msg'].forEach(function(el){ $(el).value=''; });
   $('m-d1-btn').textContent = '日付を選択';
   $('m-d1-btn').style.color = 'var(--ink3)';
   $('m-d2-btn').textContent = '日付を選択';
   $('m-d2-btn').style.color = 'var(--ink3)';
+
+  // 30分刻みセレクトを生成して m-t1, m-t2 にセット
+  buildTimeSelects(availableTime || '');
+
   // 来店可能曜日の注記
   if (CAL_ALLOWED && availableDays) {
     $('avail-days-label').textContent = availableDays;
@@ -1422,8 +1435,53 @@ function openApply(id, store, loc, availableDays) {
   } else {
     $('avail-days-note').style.display = 'none';
   }
+  // 来店可能時間の注記
+  if (availableTime) {
+    $('avail-time-label').textContent = availableTime;
+    $('avail-time-note').style.display = 'block';
+  } else {
+    $('avail-time-note').style.display = 'none';
+  }
   openMod('mod-apply');
 }
+
+// 30分刻みのselectを生成（来店可能時間があれば範囲を絞る）
+function buildTimeSelects(availableTime) {
+  // 来店可能時間から start/end を解析（例: "11:00〜20:00" "11:00-20:00"）
+  var startH = 9, endH = 22; // デフォルト 9:00〜22:00
+  var m = availableTime.match(/(\d{1,2}):?(\d{2})?\s*[〜~\-～]\s*(\d{1,2}):?(\d{2})?/);
+  if (m) {
+    startH = parseInt(m[1], 10);
+    endH   = parseInt(m[3], 10);
+    // 分指定があれば考慮（例: 11:30〜）
+  }
+
+  var opts = '<option value="">時間を選択</option>';
+  for (var h = startH; h < endH; h++) {
+    opts += '<option value="' + pad(h) + ':00">' + pad(h) + ':00</option>';
+    opts += '<option value="' + pad(h) + ':30">' + pad(h) + ':30</option>';
+  }
+  // 終了時刻ちょうども追加
+  opts += '<option value="' + pad(endH) + ':00">' + pad(endH) + ':00</option>';
+
+  // m-t1, m-t2 の input を select に差し替え（またはselectを更新）
+  ['m-t1','m-t2'].forEach(function(id) {
+    var el = $(id);
+    if (!el) return;
+    // select に変換（まだinputなら置き換え）
+    if (el.tagName === 'SELECT') {
+      el.innerHTML = opts;
+    } else {
+      var sel = document.createElement('select');
+      sel.id        = id;
+      sel.className = el.className;
+      sel.innerHTML = opts;
+      el.parentNode.replaceChild(sel, el);
+    }
+  });
+}
+
+function pad(n) { return n < 10 ? '0' + n : String(n); }
 
 function openCal(target) {
   CAL_TARGET = target;
