@@ -1355,7 +1355,7 @@ function makeCard(c, i) {
 
   var closedOv  = closed  ? '<div class="closed-ov"><div class="closed-txt">締め切りました</div></div>' : '';
   var appliedBg = applied ? '<div class="badge-applied">✓ 応募済み</div>' : '';
-  var rwdBadge  = c.reward ? '<div class="badge-reward">¥'+xe(fmtN(c.reward))+'</div>' : '';
+  var rwdBadge  = c.reward ? '<div class="badge-reward">💵¥'+xe(fmtN(c.reward))+'</div>' : '';
   var locTxt    = [c.prefecture,c.city].filter(Boolean).join(' ');
 
   var igUrl = (c.instagramUrl && /^https?:\/\//.test(c.instagramUrl)) ? c.instagramUrl : '';
