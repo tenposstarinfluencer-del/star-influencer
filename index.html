@@ -371,7 +371,7 @@ body.is-sp .reward-val{font-size:.95rem}
 .reward-lbl{font-size:.62rem;color:var(--gold);opacity:.7;letter-spacing:.08em}
 .comp{font-size:.7rem;padding:3px 9px;border-radius:10px;letter-spacing:.03em}
 .comp-ok{background:var(--sage-light);color:var(--sage);border:1px solid rgba(107,143,113,.22)}
-.comp-ng{background:var(--rose-light);color:var(--rose);border:1px solid rgba(200,97,74,.18)}
+.comp-ng{background:#fde8e8;color:#c0392b;border:1px solid rgba(192,57,43,.35);font-weight:700}
 .btn-ap{
   background:var(--rose);border:none;border-radius:var(--rs);
   padding:10px 16px;color:#fff;
@@ -455,6 +455,7 @@ select.mi{
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right .75rem center
 }
+select.mi:disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
 .mlbl{font-size:.78rem;font-weight:600;letter-spacing:.07em;color:var(--ink2);margin-bottom:.38rem}
 .mta{
   width:100%;border:1px solid var(--border);border-radius:var(--rs);
@@ -885,6 +886,9 @@ body.is-pc .toast-dot{display:none}
         </div>
       </div>
       <div class="mlbl" style="margin-top:.9rem">来店人数（本人含む）</div>
+      <div id="companion-note" style="display:none;font-size:.72rem;color:#c0392b;font-weight:600;margin-bottom:.4rem">
+        ⚠ この案件は同伴不可です。1名でのご来店のみ可能です。
+      </div>
       <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin-bottom:.6rem">
         <div style="display:flex;align-items:center;gap:.4rem">
           <label style="font-size:.82rem;color:var(--ink2);white-space:nowrap;">大人</label>
@@ -1355,7 +1359,7 @@ function makeCard(c, i) {
 
   var closedOv  = closed  ? '<div class="closed-ov"><div class="closed-txt">締め切りました</div></div>' : '';
   var appliedBg = applied ? '<div class="badge-applied">✓ 応募済み</div>' : '';
-  var rwdBadge  = c.reward ? '<div class="badge-reward">💵¥'+xe(fmtN(c.reward))+'</div>' : '';
+  var rwdBadge  = c.reward ? '<div class="badge-reward">¥'+xe(fmtN(c.reward))+'</div>' : '';
   var locTxt    = [c.prefecture,c.city].filter(Boolean).join(' ');
 
   var igUrl = (c.instagramUrl && /^https?:\/\//.test(c.instagramUrl)) ? c.instagramUrl : '';
@@ -1379,7 +1383,7 @@ function makeCard(c, i) {
   var apBtn;
   if (closed)       apBtn = '<button class="btn-ap" disabled>締め切り</button>';
   else if (applied) apBtn = '<button class="btn-ap" disabled>応募済み</button>';
-  else apBtn = '<button class="btn-ap" data-id="'+xe(c.id)+'" data-store="'+xe(c.storeName||'')+'" data-loc="'+xe(locTxt)+'" data-days="'+xe(c.availableDays||'')+'" data-time="'+xe(c.availableTime||'')+'" onclick="openApplyFromBtn(this)">応募する →</button>';
+  else apBtn = '<button class="btn-ap" data-id="'+xe(c.id)+'" data-store="'+xe(c.storeName||'')+'" data-loc="'+xe(locTxt)+'" data-days="'+xe(c.availableDays||'')+'" data-time="'+xe(c.availableTime||'')+'" data-companion="'+xe(comp)+'" onclick="openApplyFromBtn(this)">応募する →</button>';
 
   return '<div class="card" style="animation-delay:'+delay+'s">'
     +'<div class="card-inner">'
@@ -1444,11 +1448,12 @@ function openApplyFromBtn(btn) {
     btn.dataset.store,
     btn.dataset.loc,
     btn.dataset.days,
-    btn.dataset.time
+    btn.dataset.time,
+    btn.dataset.companion
   );
 }
 
-function openApply(id, store, loc, availableDays, availableTime) {
+function openApply(id, store, loc, availableDays, availableTime, companion) {
   PENDING     = id;
   CAL_ALLOWED = parseAllowedDays(availableDays || '');
   $('m-store').textContent = store;
@@ -1456,6 +1461,15 @@ function openApply(id, store, loc, availableDays, availableTime) {
   ['m-d1','m-d2','m-msg'].forEach(function(el){ $(el).value=''; });
   var ad = $('m-adults');   if (ad) ad.value = '1';
   var ch = $('m-children'); if (ch) ch.value = '0';
+
+  // 同伴不可の場合は大人1名固定・子ども0名固定でdisabled
+  var noCompanion = companion && companion.indexOf('不可') >= 0;
+  if (ad) { ad.disabled = noCompanion; }
+  if (ch) { ch.disabled = noCompanion; }
+
+  // 同伴不可の注記
+  var note = $('companion-note');
+  if (note) note.style.display = noCompanion ? 'block' : 'none';
   $('m-d1-btn').textContent = '日付を選択';
   $('m-d1-btn').style.color = 'var(--ink3)';
   $('m-d2-btn').textContent = '日付を選択';
