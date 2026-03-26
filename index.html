@@ -884,6 +884,40 @@ body.is-pc .toast-dot{display:none}
           <button onclick="closeCal()" style="background:none;border:1px solid var(--border);border-radius:var(--rs);padding:7px 16px;font-size:.82rem;color:var(--ink3);cursor:pointer">キャンセル</button>
         </div>
       </div>
+      <div class="mlbl" style="margin-top:.9rem">来店人数（本人含む）</div>
+      <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin-bottom:.6rem">
+        <div style="display:flex;align-items:center;gap:.4rem">
+          <label style="font-size:.82rem;color:var(--ink2);white-space:nowrap;">大人</label>
+          <select class="mi" id="m-adults" style="width:90px">
+            <option value="1">1名</option>
+            <option value="2">2名</option>
+            <option value="3">3名</option>
+            <option value="4">4名</option>
+            <option value="5">5名</option>
+            <option value="6">6名</option>
+            <option value="7">7名</option>
+            <option value="8">8名</option>
+            <option value="9">9名</option>
+            <option value="10">10名</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:.4rem">
+          <label style="font-size:.82rem;color:var(--ink2);white-space:nowrap;">子ども</label>
+          <select class="mi" id="m-children" style="width:90px">
+            <option value="0">0名</option>
+            <option value="1">1名</option>
+            <option value="2">2名</option>
+            <option value="3">3名</option>
+            <option value="4">4名</option>
+            <option value="5">5名</option>
+            <option value="6">6名</option>
+            <option value="7">7名</option>
+            <option value="8">8名</option>
+            <option value="9">9名</option>
+            <option value="10">10名</option>
+          </select>
+        </div>
+      </div>
       <div class="mlbl">メッセージ（任意）</div>
       <textarea class="mta" id="m-msg" placeholder="自己PR・フォロワー数・過去実績など、アピールしたいことをご記入ください。"></textarea>
     </div>
@@ -987,7 +1021,7 @@ body.is-pc .toast-dot{display:none}
 //  → 「次のユーザーとして実行: 自分」「アクセスできるユーザー: 全員」
 //  → デプロイ → 表示されたURLをコピーしてここに貼る
 // ============================================================
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbwpxEwZB6lVsYeeskx3OwP4VLazmcGui10UKsUdDi5Qstzwcjq2qFY4Z1lg0bj_FC1D/exec';
+var GAS_URL = 'https://script.google.com/macros/s/【ここにデプロイID】/exec';
 
 // ============================================================
 //  GAS APIブリッジ（fetch版）
@@ -1420,6 +1454,8 @@ function openApply(id, store, loc, availableDays, availableTime) {
   $('m-store').textContent = store;
   $('m-loc').textContent   = loc;
   ['m-d1','m-d2','m-msg'].forEach(function(el){ $(el).value=''; });
+  var ad = $('m-adults');   if (ad) ad.value = '1';
+  var ch = $('m-children'); if (ch) ch.value = '0';
   $('m-d1-btn').textContent = '日付を選択';
   $('m-d1-btn').style.color = 'var(--ink3)';
   $('m-d2-btn').textContent = '日付を選択';
@@ -1541,9 +1577,11 @@ function pickDate(dateStr) {
 function doApply() {
   if (!PENDING) return;
   var d1=gv('m-d1'), t1=gv('m-t1'), d2=gv('m-d2'), t2=gv('m-t2');
-  var msg = $('m-msg').value.substring(0,1000);
+  var msg      = $('m-msg').value.substring(0,1000);
+  var adults   = Number(gv('m-adults'))   || 1;
+  var children = Number(gv('m-children')) || 0;
   dis('btn-apply', true, '送信中…');
-  gasAuth('applyCase', TOKEN, PENDING, d1, t1, d2, t2, msg)
+  gasAuth('applyCase', TOKEN, PENDING, d1, t1, d2, t2, msg, adults, children)
   .then(function(r) {
     if (r && r.success) {
       APPLIED.push(PENDING);
@@ -1824,6 +1862,7 @@ function makeApp(a, i) {
         +'<span>\ud83d\uddd3 '+fmtAppliedAt(a.appliedAt)+'</span>'
         +(a.reward?'<span>\ud83d\udcb0 \xa5'+xe(fmtN(a.reward))+'</span>':'')
         +(a.prMenu?'<span>\u2728 '+xe(a.prMenu)+'</span>':'')
+        +((a.adults||a.children)?'<span>\ud83d\udc65 \u5927\u4eba'+xe(a.adults||1)+'\u540d'+(a.children?'\u30fb\u5b50\u3069\u3082'+xe(a.children)+'\u540d':'')+'</span>':'')
       +'</div>'
       +(!isApproved && (d1H||d2H) ? '<div class="adts">'+d1H+d2H+'</div>' : '')
       +(a.message?'<div class="amsg">\u300c'+xe(a.message)+'\u300d</div>':'')
