@@ -1383,7 +1383,7 @@ function makeCard(c, i) {
   var apBtn;
   if (closed)       apBtn = '<button class="btn-ap" disabled>締め切り</button>';
   else if (applied) apBtn = '<button class="btn-ap" disabled>応募済み</button>';
-  else apBtn = '<button class="btn-ap" data-id="'+xe(c.id)+'" data-store="'+xe(c.storeName||'')+'" data-loc="'+xe(locTxt)+'" data-days="'+xe(c.availableDays||'')+'" data-time="'+xe(c.availableTime||'')+'" data-companion="'+xe(comp)+'" onclick="openApplyFromBtn(this)">応募する →</button>';
+  else apBtn = '<button class="btn-ap" data-id="'+xe(c.id)+'" data-store="'+xe(c.storeName||'')+'" data-loc="'+xe(locTxt)+'" data-days="'+xe(c.availableDays||'')+'" data-timestart="'+xe(c.availableTimeStart||'')+'" data-timeend="'+xe(c.availableTimeEnd||'')+'" data-companion="'+xe(comp)+'" onclick="openApplyFromBtn(this)">応募する →</button>';
 
   return '<div class="card" style="animation-delay:'+delay+'s">'
     +'<div class="card-inner">'
@@ -1398,7 +1398,7 @@ function makeCard(c, i) {
         +'<div class="cbd">'
           +'<div class="chips">'
             +(c.availableDays?'<span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'+xe(c.availableDays)+'</span>':'')
-            +(c.availableTime?'<span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'+xe(c.availableTime)+'</span>':'')
+            +((c.availableTimeStart||c.availableTimeEnd)?'<span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'+xe(c.availableTimeStart||'')+(c.availableTimeEnd?'〜'+xe(c.availableTimeEnd):'')+'</span>':'')
 
           +'</div>'
           +(c.prMenu?'<div class="cmenu"><div class="cmenu-l">▶ PRメニュー</div><div class="cmenu-t">'+xe(c.prMenu)+'</div></div>':'')
@@ -1448,12 +1448,13 @@ function openApplyFromBtn(btn) {
     btn.dataset.store,
     btn.dataset.loc,
     btn.dataset.days,
-    btn.dataset.time,
+    btn.dataset.timestart,
+    btn.dataset.timeend,
     btn.dataset.companion
   );
 }
 
-function openApply(id, store, loc, availableDays, availableTime, companion) {
+function openApply(id, store, loc, availableDays, availableTimeStart, availableTimeEnd, companion) {
   PENDING     = id;
   CAL_ALLOWED = parseAllowedDays(availableDays || '');
   $('m-store').textContent = store;
@@ -1486,8 +1487,11 @@ function openApply(id, store, loc, availableDays, availableTime, companion) {
     $('avail-days-note').style.display = 'none';
   }
   // 来店可能時間は参考表示のみ（制限はしない）
-  if (availableTime) {
-    $('avail-time-label').textContent = availableTime;
+  var timeStr = availableTimeStart || availableTimeEnd
+    ? (availableTimeStart||'') + (availableTimeEnd ? '〜'+availableTimeEnd : '')
+    : '';
+  if (timeStr) {
+    $('avail-time-label').textContent = timeStr;
     $('avail-time-note').style.display = 'block';
   } else {
     $('avail-time-note').style.display = 'none';
