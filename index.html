@@ -1025,7 +1025,7 @@ body.is-pc .toast-dot{display:none}
 //  → 「次のユーザーとして実行: 自分」「アクセスできるユーザー: 全員」
 //  → デプロイ → 表示されたURLをコピーしてここに貼る
 // ============================================================
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbwpxEwZB6lVsYeeskx3OwP4VLazmcGui10UKsUdDi5Qstzwcjq2qFY4Z1lg0bj_FC1D/exec';
+var GAS_URL = 'https://script.google.com/macros/s/【ここにデプロイID】/exec';
 
 // ============================================================
 //  GAS APIブリッジ（fetch版）
@@ -1476,8 +1476,8 @@ function openApply(id, store, loc, availableDays, availableTimeStart, availableT
   $('m-d2-btn').textContent = '日付を選択';
   $('m-d2-btn').style.color = 'var(--ink3)';
 
-  // 30分刻みセレクトを生成（時間帯制限なし）
-  buildTimeSelects();
+  // 30分刻みセレクトを生成（来店可能時間で絞る）
+  buildTimeSelects(availableTimeStart, availableTimeEnd);
 
   // 来店可能曜日の注記
   if (CAL_ALLOWED && availableDays) {
@@ -1499,16 +1499,27 @@ function openApply(id, store, loc, availableDays, availableTimeStart, availableT
   openMod('mod-apply');
 }
 
-// 30分刻みのselectを生成（来店可能時間があれば範囲を絞る）
-function buildTimeSelects() {
-  // 9:00〜22:00 の30分刻み（時間帯制限なし）
-  var opts = '<option value="">時間を選択</option>';
-  for (var h = 9; h <= 23; h++) {
-    opts += '<option value="' + pad(h) + ':00">' + pad(h) + ':00</option>';
-    if (h < 23)
-      opts += '<option value="' + pad(h) + ':30">' + pad(h) + ':30</option>';
+// 30分刻みのselectを生成（開始・終了で範囲を絞る）
+function buildTimeSelects(startStr, endStr) {
+  // "HH:mm" を分に変換
+  function toMin(s) {
+    if (!s) return null;
+    var m = String(s).match(/(\d{1,2}):(\d{2})/);
+    return m ? parseInt(m[1],10)*60 + parseInt(m[2],10) : null;
   }
-  opts += '<option value="23:30">23:30</option>';
+  var startMin = toMin(startStr);
+  var endMin   = toMin(endStr);
+  // 指定がなければデフォルト 9:00〜23:30
+  if (startMin === null) startMin = 9  * 60;
+  if (endMin   === null) endMin   = 23 * 60 + 30;
+
+  var opts = '<option value="">時間を選択</option>';
+  for (var min = startMin; min <= endMin; min += 30) {
+    var h = Math.floor(min / 60);
+    var m = min % 60;
+    var val = pad(h) + ':' + pad(m);
+    opts += '<option value="' + val + '">' + val + '</option>';
+  }
   ['m-t1','m-t2'].forEach(function(id) {
     var el = $(id);
     if (!el) return;
