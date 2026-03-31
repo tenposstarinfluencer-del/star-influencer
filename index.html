@@ -660,6 +660,32 @@ body.is-pc .toast-dot{display:none}
         </div>
         <button class="btn-a" id="btn-login" onclick="doLogin()">ログイン</button>
         <div id="err-login" class="aerr" role="alert"></div>
+        <div style="text-align:center;margin-top:.75rem">
+          <button onclick="showResetForm()" style="background:none;border:none;color:rgba(255,255,255,.4);font-size:.78rem;cursor:pointer;text-decoration:underline;padding:4px 0;touch-action:manipulation;">
+            パスワードを忘れた方はこちら
+          </button>
+        </div>
+      </div>
+
+      <!-- パスワードリセットフォーム -->
+      <div id="f-reset" style="display:none">
+        <div style="text-align:center;margin-bottom:1.2rem">
+          <div style="font-size:1.5rem;margin-bottom:.4rem">🔑</div>
+          <div style="font-size:.88rem;color:rgba(255,255,255,.65);line-height:1.7">
+            登録済みのメールアドレスを入力してください。<br>仮パスワードをお送りします。
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl" for="r-reset-email">メールアドレス</label>
+          <input id="r-reset-email" class="fi" type="email" autocomplete="email" inputmode="email" placeholder="your@email.com">
+        </div>
+        <button class="btn-a" id="btn-reset" onclick="doResetPassword()">仮パスワードを送信</button>
+        <div id="err-reset" class="aerr" role="alert"></div>
+        <div style="text-align:center;margin-top:.75rem">
+          <button onclick="showLoginForm()" style="background:none;border:none;color:rgba(255,255,255,.4);font-size:.78rem;cursor:pointer;text-decoration:underline;padding:4px 0;touch-action:manipulation;">
+            ← ログインに戻る
+          </button>
+        </div>
       </div>
       <!-- 新規登録 -->
       <div id="f-reg" style="display:none">
@@ -1004,6 +1030,24 @@ body.is-pc .toast-dot{display:none}
         </div>
       </div>
 
+      <div class="sec-div">パスワード変更</div>
+      <div class="fg">
+        <label class="fl" style="color:var(--ink3)" for="p-pw-cur">現在のパスワード</label>
+        <input id="p-pw-cur" class="mi" type="password" autocomplete="current-password" placeholder="現在のパスワード">
+      </div>
+      <div class="fg">
+        <label class="fl" style="color:var(--ink3)" for="p-pw-new">新しいパスワード（8文字以上）</label>
+        <input id="p-pw-new" class="mi" type="password" autocomplete="new-password" placeholder="新しいパスワード">
+      </div>
+      <div class="fg">
+        <label class="fl" style="color:var(--ink3)" for="p-pw-cfm">新しいパスワード（確認）</label>
+        <input id="p-pw-cfm" class="mi" type="password" autocomplete="new-password" placeholder="もう一度入力">
+      </div>
+      <button id="btn-chgpw" onclick="doChangePassword()" style="width:100%;padding:13px;background:var(--rose);color:#fff;border:none;border-radius:var(--rs);font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:600;cursor:pointer;min-height:50px;touch-action:manipulation;margin-bottom:.5rem;">
+        パスワードを変更する
+      </button>
+      <div id="err-chgpw" style="font-size:.78rem;color:var(--rose);min-height:1.2em;margin-bottom:.4rem"></div>
+
       <div class="sec-div">ログアウト</div>
       <button onclick="doLogout()" style="width:100%;padding:14px;background:none;border:1px solid var(--border);border-radius:var(--rs);font-family:'DM Sans',sans-serif;font-size:.9rem;color:var(--ink3);cursor:pointer;min-height:50px;touch-action:manipulation;">
         ログアウトする
@@ -1186,7 +1230,45 @@ function switchTab(t) {
   $('tab-login').classList.toggle('on', t==='login');
   $('tab-reg').classList.toggle('on',   t==='reg');
   $('f-login').style.display = t==='login' ? 'block' : 'none';
+  if ($('f-reset')) $('f-reset').style.display = 'none';
   $('f-reg').style.display   = t==='reg'   ? 'block' : 'none';
+}
+
+function showResetForm() {
+  $('f-login').style.display = 'none';
+  $('f-reset').style.display = 'block';
+  var e = $('r-reset-email'); if(e) e.value = gv('l-email') || '';
+  var er = $('err-reset'); if(er) er.textContent = '';
+}
+
+function showLoginForm() {
+  $('f-reset').style.display = 'none';
+  $('f-login').style.display = 'block';
+}
+
+function doResetPassword() {
+  var email = gv('r-reset-email');
+  var err   = $('err-reset');
+  if (err) err.textContent = '';
+  if (!email)        { if(err) err.textContent = 'メールアドレスを入力してください'; return; }
+  if (!cEmail(email)){ if(err) err.textContent = 'メールアドレスの形式が正しくありません'; return; }
+  dis('btn-reset', true, '送信中…');
+  gas('requestPasswordReset', cSan(email, 254))
+  .then(function(r) {
+    if (r && r.success) {
+      $('f-reset').style.display = 'none';
+      $('f-login').style.display = 'block';
+      // ログインのメアド欄にも反映
+      var le = $('l-email'); if(le) le.value = email;
+      showToast('仮パスワードをメールに送信しました 📧', 'ok');
+    } else {
+      if(err) err.textContent = (r && r.message) || 'エラーが発生しました';
+    }
+    dis('btn-reset', false, '仮パスワードを送信');
+  }).catch(function() {
+    if(err) err.textContent = 'エラーが発生しました。再度お試しください。';
+    dis('btn-reset', false, '仮パスワードを送信');
+  });
 }
 
 function doLogin() {
@@ -1246,6 +1328,39 @@ function doRegister() {
   });
 }
 
+
+function doChangePassword() {
+  var cur = $('p-pw-cur').value;
+  var nw  = $('p-pw-new').value;
+  var cfm = $('p-pw-cfm').value;
+  var err = $('err-chgpw');
+  if (err) err.textContent = '';
+
+  if (!cur)          { if(err) err.textContent='現在のパスワードを入力してください'; return; }
+  if (!nw)           { if(err) err.textContent='新しいパスワードを入力してください'; return; }
+  if (nw.length < 8) { if(err) err.textContent='パスワードは8文字以上で入力してください'; return; }
+  if (nw !== cfm)    { if(err) err.textContent='新しいパスワードが一致しません'; return; }
+  if (cur === nw)    { if(err) err.textContent='現在と同じパスワードは使用できません'; return; }
+
+  var btn = $('btn-chgpw');
+  if (btn) { btn.disabled = true; btn.textContent = '変更中…'; }
+
+  gasAuth('changePassword', TOKEN, cur, nw)
+  .then(function(r) {
+    if (r && r.success) {
+      $('p-pw-cur').value = '';
+      $('p-pw-new').value = '';
+      $('p-pw-cfm').value = '';
+      showToast('パスワードを変更しました ✅', 'ok');
+    } else {
+      if (err) err.textContent = (r && r.message) || 'エラーが発生しました';
+    }
+    if (btn) { btn.disabled = false; btn.textContent = 'パスワードを変更する'; }
+  }).catch(function(e) {
+    if (e !== 'SESSION_EXPIRED') { if(err) err.textContent = 'エラーが発生しました'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'パスワードを変更する'; }
+  });
+}
 
 function doLogout() {
   if (TOKEN) gas('logoutUser', TOKEN).catch(function(){});
@@ -1913,6 +2028,9 @@ function openProfile() {
   $('p-tt-url').value      = U.ttUrl||'';
   $('p-gl').value          = U.glLv||'';
   $('p-tb').value          = U.tbFollowers||'';
+  // パスワード欄をリセット
+  ['p-pw-cur','p-pw-new','p-pw-cfm'].forEach(function(id){ var el=$(id); if(el) el.value=''; });
+  var ep = $('err-chgpw'); if(ep) ep.textContent='';
   var bp = $('bn-prof'); if (bp) bp.classList.add('on');
   openMod('mod-prof');
 }
