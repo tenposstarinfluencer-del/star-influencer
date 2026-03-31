@@ -1030,7 +1030,32 @@ body.is-pc .toast-dot{display:none}
         </div>
       </div>
 
-      <div class="sec-div">パスワード変更</div>
+      <div class="sec-div">アカウント</div>
+      <button onclick="openMod('mod-chgpw')" style="width:100%;padding:13px;background:none;border:1px solid var(--border);border-radius:var(--rs);font-family:'DM Sans',sans-serif;font-size:.9rem;color:var(--ink2);cursor:pointer;min-height:50px;touch-action:manipulation;margin-bottom:.5rem;display:flex;align-items:center;justify-content:center;gap:.5rem;">
+        🔑 パスワードを変更する
+      </button>
+
+      <div class="sec-div">ログアウト</div>
+      <button onclick="doLogout()" style="width:100%;padding:14px;background:none;border:1px solid var(--border);border-radius:var(--rs);font-family:'DM Sans',sans-serif;font-size:.9rem;color:var(--ink3);cursor:pointer;min-height:50px;touch-action:manipulation;">
+        ログアウトする
+      </button>
+    </div>
+    <div class="mft">
+      <button class="btn-c" onclick="closeMod('mod-prof')">キャンセル</button>
+      <button class="btn-s" id="btn-save" onclick="doSaveProf()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<!-- パスワード変更モーダル -->
+<div class="mov" id="mod-chgpw">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="mhd">
+      <span class="mhd-t">パスワード変更</span>
+      <button class="mcls" onclick="closeMod('mod-chgpw')" aria-label="閉じる">×</button>
+    </div>
+    <div class="mbd">
       <div class="fg">
         <label class="fl" style="color:var(--ink3)" for="p-pw-cur">現在のパスワード</label>
         <input id="p-pw-cur" class="mi" type="password" autocomplete="current-password" placeholder="現在のパスワード">
@@ -1043,19 +1068,11 @@ body.is-pc .toast-dot{display:none}
         <label class="fl" style="color:var(--ink3)" for="p-pw-cfm">新しいパスワード（確認）</label>
         <input id="p-pw-cfm" class="mi" type="password" autocomplete="new-password" placeholder="もう一度入力">
       </div>
-      <button id="btn-chgpw" onclick="doChangePassword()" style="width:100%;padding:13px;background:var(--rose);color:#fff;border:none;border-radius:var(--rs);font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:600;cursor:pointer;min-height:50px;touch-action:manipulation;margin-bottom:.5rem;">
-        パスワードを変更する
-      </button>
-      <div id="err-chgpw" style="font-size:.78rem;color:var(--rose);min-height:1.2em;margin-bottom:.4rem"></div>
-
-      <div class="sec-div">ログアウト</div>
-      <button onclick="doLogout()" style="width:100%;padding:14px;background:none;border:1px solid var(--border);border-radius:var(--rs);font-family:'DM Sans',sans-serif;font-size:.9rem;color:var(--ink3);cursor:pointer;min-height:50px;touch-action:manipulation;">
-        ログアウトする
-      </button>
+      <div id="err-chgpw" style="font-size:.78rem;color:var(--rose);min-height:1.2em;margin-top:.2rem"></div>
     </div>
     <div class="mft">
-      <button class="btn-c" onclick="closeMod('mod-prof')">キャンセル</button>
-      <button class="btn-s" id="btn-save" onclick="doSaveProf()">保存する</button>
+      <button class="btn-c" onclick="closeMod('mod-chgpw')">キャンセル</button>
+      <button class="btn-s" id="btn-chgpw" onclick="doChangePassword()">変更する</button>
     </div>
   </div>
 </div>
@@ -1351,6 +1368,7 @@ function doChangePassword() {
       $('p-pw-cur').value = '';
       $('p-pw-new').value = '';
       $('p-pw-cfm').value = '';
+      closeMod('mod-chgpw');
       showToast('パスワードを変更しました ✅', 'ok');
     } else {
       if (err) err.textContent = (r && r.message) || 'エラーが発生しました';
@@ -2028,9 +2046,6 @@ function openProfile() {
   $('p-tt-url').value      = U.ttUrl||'';
   $('p-gl').value          = U.glLv||'';
   $('p-tb').value          = U.tbFollowers||'';
-  // パスワード欄をリセット
-  ['p-pw-cur','p-pw-new','p-pw-cfm'].forEach(function(id){ var el=$(id); if(el) el.value=''; });
-  var ep = $('err-chgpw'); if(ep) ep.textContent='';
   var bp = $('bn-prof'); if (bp) bp.classList.add('on');
   openMod('mod-prof');
 }
@@ -2077,6 +2092,10 @@ function openMod(id) {
 function closeMod(id) {
   $(id).classList.remove('on');
   document.body.style.overflow = '';
+  if (id==='mod-chgpw') {
+    ['p-pw-cur','p-pw-new','p-pw-cfm'].forEach(function(i){ var e=$(i); if(e) e.value=''; });
+    var ec=$('err-chgpw'); if(ec) ec.textContent='';
+  }
   if (id==='mod-prof') {
     var bp=$('bn-prof'); if(bp) bp.classList.remove('on');
   }
