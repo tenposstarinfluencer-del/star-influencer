@@ -17,9 +17,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);l
 .lb-brand{font-family:'Shippori Mincho',serif;font-size:1.5rem;letter-spacing:.4em;color:#fff;text-align:center}
 .lb-brand em{color:var(--rose);font-style:normal}
 .lb-sub{font-size:.7rem;letter-spacing:.2em;color:rgba(255,255,255,.3);margin-top:.5rem;text-align:center}
-.lb-bar{width:100px;height:2px;background:rgba(255,255,255,.1);border-radius:2px;margin:1.4rem auto 0;overflow:hidden}
-.lb-fill{height:100%;width:0;background:var(--rose);animation:fillBar 1.2s ease forwards .2s}
-@keyframes fillBar{to{width:100%}}
+.lb-bar{width:180px;max-width:70vw;height:3px;background:rgba(255,255,255,.12);border-radius:3px;margin:1.15rem auto 0;overflow:hidden}
+.lb-fill{height:100%;width:100%;background:var(--rose);transform:scaleX(0);transform-origin:left center;will-change:transform}
+.lb-progress{display:flex;align-items:center;justify-content:space-between;width:180px;max-width:70vw;margin:.55rem auto 0;gap:.7rem}
+.lb-status{font-size:.65rem;letter-spacing:.04em;color:rgba(255,255,255,.42);min-width:0}
+.lb-percent{font-family:'DM Sans',sans-serif;font-size:.7rem;font-weight:600;font-variant-numeric:tabular-nums;color:rgba(255,255,255,.72);min-width:38px;text-align:right}
 /* ===== AUTH ===== */
 #auth-page{min-height:100vh;background:var(--ink);display:flex;align-items:center;justify-content:center;padding:1rem}
 #auth-page.hidden{display:none}
@@ -250,7 +252,19 @@ body.is-pc .toast-dot{display:none}
 </head>
 <body>
 <!-- LOADER -->
-<div id="loader"><div><div class="lb-brand">INFLUENCER <em>PR</em></div><div class="lb-sub">テンポスPR案件掲示板</div><div class="lb-bar"><div class="lb-fill"></div></div></div></div>
+<div id="loader" role="status" aria-label="読み込み中">
+  <div>
+    <div class="lb-brand">INFLUENCER <em>PR</em></div>
+    <div class="lb-sub">テンポスPR案件掲示板</div>
+    <div class="lb-bar" id="lb-track" role="progressbar" aria-label="読み込み進行度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="lb-fill" id="lb-fill"></div>
+    </div>
+    <div class="lb-progress">
+      <span class="lb-status" id="lb-status" aria-live="off">準備中…</span>
+      <span class="lb-percent" id="lb-percent">0%</span>
+    </div>
+  </div>
+</div>
 <!-- AUTH -->
 <div id="auth-page">
   <div class="auth-wrap">
@@ -426,19 +440,144 @@ function handleSessionExpired() {
   $('pg-apps').classList.remove('on');
   $('auth-page').classList.remove('hidden');
   window.scrollTo(0,0);
+  cancelLoaderProgress();
   showToast('セッションの有効期限が切れました。再ログインしてください。','err');
 }
 
 // ============================================================
-//  初期化：DOM準備完了で開始し、意図的な待機時間を設けない
+//  ローディングバー：進行段階と実処理の完了を連動
+//  通信時間そのものは取得できないため、待機中は各段階の上限へ
+//  滑らかに近づけ、認証・取得・描画完了後にのみ100%へ進める。
 // ============================================================
-function hideLoader() {
-  var l = $('loader');
-  if (!l || l.style.display === 'none') return;
-  l.style.opacity = '0';
-  setTimeout(function() { l.style.display = 'none'; }, 160);
+var LOADER_PROGRESS = {
+  active: false, displayed: 0, target: 0, lastFrame: 0,
+  frameId: null, finishing: false, hideTimer: null,
+  onHidden: null
+};
+
+function paintLoaderProgress() {
+  var pct = Math.min(100, Math.max(0, Math.floor(LOADER_PROGRESS.displayed)));
+  $('lb-fill').style.transform = 'scaleX(' + (LOADER_PROGRESS.displayed / 100) + ')';
+  $('lb-percent').textContent = pct + '%';
+  $('lb-track').setAttribute('aria-valuenow', String(pct));
 }
 
+function animateLoaderProgress(now) {
+  var p = LOADER_PROGRESS;
+  if (!p.active) { p.frameId = null; return; }
+  var dt = p.lastFrame ? Math.min(64, Math.max(1, now - p.lastFrame)) : 16;
+  p.lastFrame = now;
+  var diff = p.target - p.displayed;
+  if (diff > 0) {
+    // 待機中は上限まで滑らかに減速。完了後は少し速く100%へ。
+    var ease = 1 - Math.exp(-dt / (p.finishing ? 65 : 650));
+    var delta = diff * ease;
+    if (p.finishing) delta = Math.max(delta, Math.min(diff, dt * 0.28));
+    p.displayed = Math.min(p.target, p.displayed + delta);
+  }
+  if (p.finishing && p.displayed >= 99.8) {
+    p.displayed = 100;
+    paintLoaderProgress();
+    p.frameId = null;
+    // 100%表示を実際に1フレーム描画してから閉じる。
+    requestAnimationFrame(function() {
+      if (p.active && p.finishing) hideLoaderProgress(false);
+    });
+    return;
+  }
+  if (!p.finishing && p.target - p.displayed < 0.025) {
+    p.displayed = p.target;
+    paintLoaderProgress();
+    p.frameId = null;
+    return;
+  }
+  paintLoaderProgress();
+  p.frameId = requestAnimationFrame(animateLoaderProgress);
+}
+
+function startLoaderProgress(stage) {
+  var p = LOADER_PROGRESS;
+  if (p.hideTimer) { clearTimeout(p.hideTimer); p.hideTimer = null; }
+  if (p.frameId !== null) { cancelAnimationFrame(p.frameId); p.frameId = null; }
+  p.active = true;
+  p.displayed = 0;
+  p.target = 6;
+  p.finishing = false;
+  p.lastFrame = 0;
+  p.onHidden = null;
+  var l = $('loader');
+  l.style.display = 'flex';
+  l.style.opacity = '1';
+  $('lb-status').textContent = stage || '準備中…';
+  paintLoaderProgress();
+  p.frameId = requestAnimationFrame(animateLoaderProgress);
+}
+
+function setLoaderStage(stage, limit) {
+  var p = LOADER_PROGRESS;
+  if (!p.active || p.finishing) return;
+  $('lb-status').textContent = stage;
+  // 実処理が完了するまでは最大99%。100%はfinishLoaderProgressのみ。
+  p.target = Math.max(p.target, Math.min(99, limit));
+  if (p.frameId === null) {
+    p.lastFrame = 0;
+    p.frameId = requestAnimationFrame(animateLoaderProgress);
+  }
+}
+
+function hideLoaderProgress(immediate) {
+  var p = LOADER_PROGRESS;
+  if (p.frameId !== null) { cancelAnimationFrame(p.frameId); p.frameId = null; }
+  if (p.hideTimer) { clearTimeout(p.hideTimer); p.hideTimer = null; }
+  p.active = false;
+  p.finishing = false;
+  var l = $('loader');
+  if (!l) return;
+  if (immediate) {
+    l.style.transition = 'none';
+    l.style.opacity = '0';
+    l.style.display = 'none';
+    l.style.transition = '';
+    if (p.onHidden) { var cb1 = p.onHidden; p.onHidden = null; cb1(); }
+    return;
+  }
+  l.style.opacity = '0';
+  p.hideTimer = setTimeout(function() {
+    l.style.display = 'none';
+    p.hideTimer = null;
+    if (p.onHidden) { var cb = p.onHidden; p.onHidden = null; cb(); }
+  }, 160);
+}
+
+function cancelLoaderProgress() {
+  // 通信・認証エラー時は100%に見せずに閉じる。
+  if (LOADER_PROGRESS.active) hideLoaderProgress(false);
+}
+
+function finishLoaderProgress() {
+  var p = LOADER_PROGRESS;
+  if (!p.active) return Promise.resolve();
+  // 画面描画をブラウザに渡した後で、初めて100%への到達を許可する。
+  return new Promise(function(resolve) {
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        if (!p.active) { resolve(); return; }
+        $('lb-status').textContent = '読み込み完了';
+        p.finishing = true;
+        p.target = 100;
+        p.onHidden = resolve;
+        if (p.frameId === null) {
+          p.lastFrame = 0;
+          p.frameId = requestAnimationFrame(animateLoaderProgress);
+        }
+      });
+    });
+  });
+}
+
+// ============================================================
+//  初期化：自動ログイン時だけ進行バーを表示。未ログインは即表示。
+// ============================================================
 function initializeApp() {
   var savedToken = null;
   var savedUser = null;
@@ -448,29 +587,36 @@ function initializeApp() {
   } catch(e) {}
 
   if (!savedToken || !savedUser) {
-    hideLoader(); // 保存済みログインなし：ログイン画面を即表示
+    hideLoaderProgress(true); // 保存済みログインなし：固定待機なしでログイン画面
     return;
   }
 
-  // 検証＋案件データ取得を1リクエストで実行。取得結果は二度読み込まず初期描画に利用。
+  startLoaderProgress('ログイン状態を確認しています…');
+  // GASのAPIは検証と案件取得を同時に返すため、通信中は1段階として扱う。
+  setLoaderStage('認証・案件データを取得しています…', 87);
   gas('getCasesWithApplied', savedToken)
     .then(function(r) {
       if (r && Array.isArray(r.cases) && Array.isArray(r.applied) && !r.error) {
         TOKEN = savedToken;
         U = savedUser;
-        enterApp(r); // 同じ案件データをそのまま再利用する
-      } else if (r && (r.error === 'SESSION_EXPIRED' || r.message === 'SESSION_EXPIRED')) {
+        // 取得済み案件データで描画し、再通信しない。
+        enterApp(r);
+        setLoaderStage('案件一覧を表示しています…', 97);
+        return finishLoaderProgress();
+      }
+      if (r && (r.error === 'SESSION_EXPIRED' || r.message === 'SESSION_EXPIRED')) {
         clearSession();
       } else {
-        // GASの一時エラーでは保存済みの30日トークンを削除しない
+        // 一時エラー時には保存済みトークンを維持。
         showToast('認証の確認に失敗しました。再読み込みしてお試しください。', 'err');
       }
+      cancelLoaderProgress();
     })
     .catch(function() {
-      // 通信障害は失効とは異なる。次回アクセス時に再検証する。
+      // 通信障害時はトークンを保持して次回アクセス時に再検証できるようにする。
+      cancelLoaderProgress();
       showToast('接続できませんでした。通信状態をご確認のうえ再読み込みしてください。', 'err');
-    })
-    .then(hideLoader);
+    });
 }
 
 if (document.readyState === 'loading') {
@@ -528,13 +674,29 @@ function doLogin() {
   if (!cEmail(email))    { showErr('login','メールアドレスの形式が正しくありません'); return; }
   if (pass.length < 8)   { showErr('login','パスワードは8文字以上です'); return; }
   dis('btn-login', true, '認証中…');
-  // 変更: チェック状態をGASへ送信し、30日セッションか60分セッションを選択
+  startLoaderProgress('ログイン情報を確認しています…');
+  setLoaderStage('アカウントを認証しています…', 52);
+  // 30日保持設定は既存どおりGASに送信する。
   gas('loginUser', cSan(email,254), pass, $('l-keep').checked).then(function(r) {
-    if (r && r.success) { saveSession(r.token, r.user, $('l-keep').checked); enterApp(); }
-    else showErr('login', (r && r.message) || 'ログイン情報が正しくありません');
-    dis('btn-login', false, 'ログイン');
-  }).catch(function() {
-    showErr('login', 'エラーが発生しました。GAS URLの設定を確認してください。');
+    if (!r || !r.success) {
+      cancelLoaderProgress();
+      showErr('login', (r && r.message) || 'ログイン情報が正しくありません');
+      return;
+    }
+    saveSession(r.token, r.user, $('l-keep').checked);
+    setLoaderStage('案件データを取得しています…', 88);
+    // enterApp→loadCasesの通信が終了するまで100%にはしない。
+    return enterApp().then(function(loaded) {
+      if (!loaded) { cancelLoaderProgress(); return; }
+      setLoaderStage('案件一覧を表示しています…', 97);
+      return finishLoaderProgress();
+    });
+  }).catch(function(err) {
+    cancelLoaderProgress();
+    if (err !== 'SESSION_EXPIRED') {
+      showErr('login', 'エラーが発生しました。GAS URLの設定を確認してください。');
+    }
+  }).finally(function() {
     dis('btn-login', false, 'ログイン');
   });
 }
@@ -626,7 +788,7 @@ function enterApp(prefetchedCases) {
   $('uname').textContent    = name;
   $('uname-sp').textContent = name;
   if (IS_SP) $('bottom-nav').classList.add('show');
-  goPage('cases', prefetchedCases);
+  return goPage('cases', prefetchedCases);
 }
 
 // ============================================================
@@ -643,7 +805,7 @@ function goPage(p, prefetchedCases) {
     var nc=$('nb-cases'), bc=$('bn-cases');
     if(nc) nc.classList.add('on');
     if(bc) bc.classList.add('on');
-    loadCases(prefetchedCases);
+    return loadCases(prefetchedCases);
   } else {
     $('pg-apps').classList.add('on');
     var na=$('nb-apps'), ba=$('bn-apps');
@@ -666,18 +828,18 @@ function loadCases(prefetchedCases) {
     APPLIED = prefetchedCases.applied;
     CASES_LOADED_AT = Date.now();
     render();
-    return;
+    return Promise.resolve(true);
   }
 
   if (CASES_LOADED_AT && Date.now() - CASES_LOADED_AT < CASES_CACHE_MS) {
     render();
-    return;
+    return Promise.resolve(true);
   }
 
   // 取得待ち中に画面を切り替えても同じ通信を重ねない。
   if (CASES_LOADING) {
     if (CASES_LOADED_AT) render();
-    return;
+    return CASES_LOADING;
   }
 
   // 古いデータがあれば先に表示し、画面を空白に戻さない。
@@ -689,10 +851,10 @@ function loadCases(prefetchedCases) {
 
   var requestToken = TOKEN;
   var pending = gasAuth('getCasesWithApplied', requestToken);
-  CASES_LOADING = pending;
-  pending.then(function(r) {
+  // 通常の画面遷移でも、初回ログイン中でも同じ取得結果を待てるようPromiseを返す。
+  var requestResult = pending.then(function(r) {
     // 古いログイン状態から返った結果は画面に反映しない。
-    if (TOKEN !== requestToken) return;
+    if (TOKEN !== requestToken) return false;
     if (!r || !Array.isArray(r.cases) || !Array.isArray(r.applied)) {
       throw new Error('INVALID_CASES_RESPONSE');
     }
@@ -700,16 +862,20 @@ function loadCases(prefetchedCases) {
     APPLIED = r.applied;
     CASES_LOADED_AT = Date.now();
     if ($('pg-cases').classList.contains('on')) render();
+    return true;
   }).catch(function(err) {
-    if (err === 'SESSION_EXPIRED' || TOKEN !== requestToken) return;
+    if (err === 'SESSION_EXPIRED' || TOKEN !== requestToken) return false;
     if (CASES_LOADED_AT) {
       showToast('案件一覧を更新できませんでした。しばらくして再度お試しください。', 'err');
     } else if ($('pg-cases').classList.contains('on')) {
       $('cgrid').innerHTML = emptyHTML('⚠️','読み込みエラー','ページを再読み込みしてください');
     }
-  }).then(function() {
-    if (CASES_LOADING === pending) CASES_LOADING = null;
+    return false;
+  }).finally(function() {
+    if (CASES_LOADING === requestResult) CASES_LOADING = null;
   });
+  CASES_LOADING = requestResult;
+  return requestResult;
 }
 
 function render() {
