@@ -248,6 +248,90 @@ body.is-pc #toast.on{transform:translateX(0)}
 body.is-pc #toast.ok{border-left-color:var(--sage)}
 body.is-pc #toast.err{border-left-color:var(--rose)}
 body.is-pc .toast-dot{display:none}
+
+/* ===== v5: スマートフォンの入力・文字・横幅調整 ===== */
+:root {
+  --ui-font: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Hiragino Sans',
+    'Hiragino Kaku Gothic ProN', 'Yu Gothic', Meiryo, sans-serif;
+}
+body, button, input, select, textarea {font-family:var(--ui-font)}
+/* 狭い画面でグリッドやフォームが内容の最小幅に引っ張られないよう統一 */
+.fi2, .pgrid, .mdr {grid-template-columns:minmax(0,1fr)}
+.fi2 {grid-template-columns:repeat(2,minmax(0,1fr))}
+body.is-pc .pgrid, body.is-pc .mdr {grid-template-columns:repeat(2,minmax(0,1fr))}
+.fi2 > *, .pgrid > *, .mdr > * {min-width:0}
+.fi, .mi, .mta, .fsrch, select.mi {max-width:100%;min-width:0}
+.ain, .ai, .card-right, .modal, .mbd, .mds, .cd-val {min-width:0}
+.aist, .amet, .amsg, .cd-val, .cd-menu-t, .cd-ng {overflow-wrap:anywhere}
+/* 投稿情報：日付ピッカーを必ずカード幅に収める */
+.post-submit {
+  min-width:0;max-width:100%;width:100%;
+  margin-top:.75rem;padding-top:.75rem;
+  border-top:1px solid rgba(107,143,113,.24);
+  overflow-wrap:anywhere;
+}
+.post-submit-title {font-size:.82rem;font-weight:700;color:#426e4b;margin-bottom:.55rem;letter-spacing:.02em}
+.post-submit-form {display:grid;grid-template-columns:minmax(0,1fr);gap:.7rem;min-width:0;width:100%}
+.post-field {display:block;min-width:0;max-width:100%;width:100%;font-size:.8rem;font-weight:600;line-height:1.5;color:var(--ink2)}
+.post-input {
+  display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;
+  height:46px;line-height:normal;margin-top:.35rem;padding:0 12px;
+  border:1px solid var(--border2);border-radius:var(--rs);
+  background:var(--paper2);color:var(--ink);font-family:var(--ui-font);
+  font-size:16px;font-weight:400;letter-spacing:normal;
+  -webkit-appearance:auto;appearance:auto;
+  font-variant-numeric:tabular-nums;
+}
+.post-input:focus {outline:2px solid rgba(107,143,113,.3);outline-offset:1px;border-color:var(--sage)}
+.post-input::placeholder {color:var(--ink3);opacity:1}
+.post-date-input {min-width:0!important;max-width:100%!important;overflow:hidden;color-scheme:light}
+.post-date-input::-webkit-date-and-time-value {min-width:0;max-width:100%;text-align:left}
+.post-date-input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0}
+.post-date-input::-webkit-calendar-picker-indicator {flex-shrink:0;margin-left:4px;cursor:pointer;opacity:.75}
+.post-submit-btn {
+  display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;
+  min-height:46px;padding:10px 12px;border:none;border-radius:var(--rs);
+  background:var(--sage);color:#fff;font-family:var(--ui-font);
+  font-size:.88rem;font-weight:700;line-height:1.45;
+  white-space:normal;overflow-wrap:anywhere;cursor:pointer;touch-action:manipulation;
+}
+.post-submit-btn:disabled {opacity:.55;cursor:not-allowed}
+.post-submitted-url,.post-submitted-date {font-size:.82rem;line-height:1.65;color:var(--ink2);overflow-wrap:anywhere}
+.post-submitted-url {margin-bottom:.5rem}
+.post-submitted-url a {color:var(--rose);overflow-wrap:anywhere;word-break:break-word}
+/* 応募カード・ナビゲーションのスマートフォン最適化 */
+@media (max-width:640px) {
+  .wrap {padding-left:.85rem;padding-right:.85rem}
+  .grid {grid-template-columns:minmax(0,1fr)}
+  .ai {flex-direction:column;align-items:stretch;gap:.55rem;padding:.9rem 1rem}
+  .ast {width:max-content;max-width:100%;height:auto;min-height:29px;flex-direction:row;align-self:flex-start;gap:.35rem;padding:.25rem .7rem;border-radius:999px;font-size:.74rem;letter-spacing:.02em}
+  .ain {flex:1 1 auto;width:100%;min-width:0}
+  .aist {font-size:1rem;line-height:1.5}
+  .amet {font-size:.78rem;line-height:1.65;gap:.25rem .6rem}
+  .adts,.amsg {font-size:.78rem;line-height:1.65}
+  .ptitle {font-size:1.28rem}
+  .mhd-t {font-size:.98rem}
+  .modal {max-width:100%;max-height:92dvh}
+  .mbd {padding:1.05rem .95rem}
+  .mds {padding:.8rem}
+  .mft {padding:.85rem .95rem;flex-wrap:wrap}
+  .mft .btn-c,.mft .btn-s {flex:1 1 auto;min-width:0;padding:11px 12px}
+  .sp-hdr-right {min-width:0;max-width:47%}
+  .huserbtn {max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hlogo {min-width:0;font-size:.88rem;letter-spacing:.15em}
+  .bnav-item {font-size:.72rem;letter-spacing:.02em}
+  .fl {font-size:.82rem;letter-spacing:.02em}
+  .cft {flex-wrap:wrap}
+  .comp {overflow-wrap:anywhere}
+  #toast {white-space:normal;width:max-content;min-width:0;max-width:calc(100vw - 28px);line-height:1.45}
+}
+@media (max-width:359px) {
+  .fi2 {grid-template-columns:minmax(0,1fr)}
+  .hi {padding:0 .7rem}
+  .hlogo {font-size:.78rem;letter-spacing:.1em}
+  .wrap {padding-left:.7rem;padding-right:.7rem}
+  .ai {padding:.8rem}
+}
 </style>
 </head>
 <body>
@@ -1318,37 +1402,30 @@ function makePostSubmissionHtml(a) {
   var appId = xe(a.applicationId);
   var url = String(a.postUrl || '');
   var date = String(a.postDate || '');
-  var html = '<div style="margin-top:.7rem;padding-top:.65rem;border-top:1px solid rgba(107,143,113,.2)">'
-    + '<div style="font-size:.7rem;color:var(--sage);font-weight:700;margin-bottom:.4rem">投稿情報の提出</div>';
+  var html = '<section class="post-submit">'
+    + '<div class="post-submit-title">投稿情報の提出</div>';
   if (url) {
-    html += '<div style="font-size:.76rem;margin-bottom:.45rem">投稿URL：'
-      + '<a href="' + xe(url) + '" target="_blank" rel="noopener noreferrer" '
-      + 'style="color:var(--rose);overflow-wrap:anywhere">' + xe(url) + '</a></div>';
+    html += '<div class="post-submitted-url">投稿URL：'
+      + '<a href="' + xe(url) + '" target="_blank" rel="noopener noreferrer">' + xe(url) + '</a></div>';
   }
   if (date) {
-    html += '<div style="font-size:.78rem;color:var(--ink2)">投稿日：' + xe(fmtDate(date)) + '</div>';
+    html += '<div class="post-submitted-date">投稿日：' + xe(fmtDate(date)) + '</div>';
   } else {
-    html += '<div style="display:grid;gap:.5rem">';
+    html += '<div class="post-submit-form">';
     if (!url) {
-      html += '<label style="font-size:.72rem;color:var(--ink2)">投稿URL（必須）'
-        + '<input id="post-url-' + appId + '" type="url" inputmode="url" '
-        + 'placeholder="https://www.instagram.com/p/..." '
-        + 'style="display:block;width:100%;min-width:0;margin-top:.2rem;height:42px;padding:0 .7rem;'
-        + 'border:1px solid var(--border);border-radius:var(--rs);font-size:16px;background:var(--paper2)">'
+      html += '<label class="post-field" for="post-url-' + appId + '">投稿URL（必須）'
+        + '<input class="post-input" id="post-url-' + appId + '" type="url" inputmode="url" '
+        + 'placeholder="https://www.instagram.com/p/..." autocomplete="url">'
         + '</label>';
     }
-    html += '<label style="font-size:.72rem;color:var(--ink2)">投稿日（必須）'
-      + '<input class="js-post-date" id="post-date-' + appId + '" type="date" '
-      + 'style="display:block;width:100%;margin-top:.2rem;height:42px;padding:0 .7rem;'
-      + 'border:1px solid var(--border);border-radius:var(--rs);font-size:16px;background:var(--paper2)">'
+    html += '<label class="post-field" for="post-date-' + appId + '">投稿日（必須）'
+      + '<input class="post-input post-date-input js-post-date" id="post-date-' + appId + '" type="date">'
       + '</label>'
-      + '<button class="js-post-url-btn" data-appid="' + appId + '" id="post-url-btn-' + appId + '" '
-      + 'style="padding:10px 16px;background:var(--sage);color:#fff;border:none;border-radius:var(--rs);'
-      + 'font-size:.82rem;font-weight:600;min-height:42px;cursor:pointer">'
+      + '<button class="post-submit-btn js-post-url-btn" type="button" data-appid="' + appId + '" id="post-url-btn-' + appId + '">'
       + (url ? '投稿日を登録する' : '投稿URLと投稿日を提出する')
       + '</button></div>';
   }
-  return html + '</div>';
+  return html + '</section>';
 }
 
 function fmtAppliedAt(str) {
