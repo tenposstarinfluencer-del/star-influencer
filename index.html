@@ -154,6 +154,10 @@ body.is-sp .reward-val{font-size:.95rem}
 .btn-ap{background:var(--rose);border:none;border-radius:var(--rs);padding:10px 16px;color:#fff;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;letter-spacing:.05em;cursor:pointer;flex-shrink:0;min-height:42px;touch-action:manipulation;transition:background .15s}
 .btn-ap:active{background:var(--rose-dark)}
 .btn-ap:disabled{background:var(--border);color:var(--ink3);cursor:not-allowed}
+/* ===== PR内容：本文内URLの自動リンク化 ===== */
+.cmenu-t,.pr-text-block{white-space:pre-wrap;overflow-wrap:anywhere}
+.pr-text-link{color:var(--rose-dark);text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere;word-break:break-word;cursor:pointer}
+.pr-text-link:hover,.pr-text-link:focus-visible{color:var(--rose);text-decoration-thickness:2px}
 /* ===== EMPTY STATE ===== */
 .empty{text-align:center;padding:4rem 1.5rem;color:var(--ink3)}
 .empty-i{font-size:2.6rem;margin-bottom:.8rem}
@@ -1045,7 +1049,7 @@ function makeCard(c, i) {
             +(c.availableDays?'<span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'+xe(c.availableDays)+'</span>':'')
             +((c.availableTimeStart||c.availableTimeEnd)?'<span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'+xe(c.availableTimeStart||'')+(c.availableTimeEnd?'〜'+xe(c.availableTimeEnd):'')+'</span>':'')
           +'</div>'
-          +(c.prMenu?'<div class="cmenu"><div class="cmenu-l">▶ PRメニュー</div><div class="cmenu-t">'+xe(c.prMenu)+'</div></div>':'')
+          +(c.prMenu?'<div class="cmenu"><div class="cmenu-l">▶ PRメニュー</div><div class="cmenu-t">'+linkifyPrText(c.prMenu)+'</div></div>':'')
           +(c.ngItems?'<div class="cng"><b>⚠ NG：</b>'+xe(c.ngItems)+'</div>':'')
         +'</div>'
         +'<div class="cft">'
@@ -1500,7 +1504,7 @@ function makeApp(a, i) {
         +'<span>\ud83d\udccd '+xe(a.prefecture)+'</span>'
         +'<span>\ud83d\uddd3 '+fmtAppliedAt(a.appliedAt)+'</span>'
         +(a.reward?'<span>\ud83d\udcb0 \xa5'+xe(fmtN(a.reward))+'</span>':'')
-        +(a.prMenu?'<span>\u2728 '+xe(a.prMenu)+'</span>':'')
+        +(a.prMenu?'<span class="pr-text-block">\u2728 '+linkifyPrText(a.prMenu)+'</span>':'')
         +((a.adults||a.children)?'<span>\ud83d\udc65 \u5927\u4eba'+xe(a.adults||1)+'\u540d'+(a.children?'\u30fb\u5b50\u3069\u3082'+xe(a.children)+'\u540d':'')+'</span>':'')
       +'</div>'
       +(!isApproved && (d1H||d2H) ? '<div class="adts">'+d1H+d2H+'</div>' : '')
@@ -1591,6 +1595,46 @@ function xe(s) {
   return String(s)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+// PR内容の平文はエスケープし、http(s) URL / www. のみリンク化する。
+// 外部リンクは別タブで開き、危険なスキームやHTMLは通さない。
+function linkifyPrText(value) {
+  if (value == null) return '';
+  var source = String(value);
+  var pattern = /(?:https?:\/\/|www\.)[^\s<>"'「」『』【】]+/gi;
+  var html = '';
+  var last = 0;
+  var match;
+  while ((match = pattern.exec(source)) !== null) {
+    html += xe(source.slice(last, match.index));
+    var matched = match[0];
+    var urlText = matched;
+    var tail = '';
+    // 句読点など、URLの直後にある文章側の記号をリンクから除外する。
+    while (urlText) {
+      var end = urlText.slice(-1);
+      var punctuation = /[.,;:!?，．、。！？；：）\]｝】〉》」』]/.test(end);
+      var extraClosingParen = end === ')' &&
+        (urlText.match(/\)/g) || []).length > (urlText.match(/\(/g) || []).length;
+      if (!punctuation && !extraClosingParen) break;
+      tail = end + tail;
+      urlText = urlText.slice(0, -1);
+    }
+    var href = '';
+    try {
+      var candidate = /^www\./i.test(urlText) ? 'https://' + urlText : urlText;
+      var parsed = new URL(candidate);
+      if ((parsed.protocol === 'http:' || parsed.protocol === 'https:') && parsed.hostname) {
+        href = parsed.href;
+      }
+    } catch (e) { /* URLとして解釈できなければ通常のテキスト */ }
+    html += href
+      ? '<a class="pr-text-link" href="' + xe(href) + '" target="_blank" rel="noopener noreferrer">' + xe(urlText) + '</a>'
+      : xe(urlText);
+    html += xe(tail);
+    last = match.index + matched.length;
+  }
+  return html + xe(source.slice(last));
 }
 function esc(s) {
   if (s==null) return '';
