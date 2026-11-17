@@ -336,6 +336,15 @@ body.is-pc .pgrid, body.is-pc .mdr {grid-template-columns:repeat(2,minmax(0,1fr)
   .wrap {padding-left:.7rem;padding-right:.7rem}
   .ai {padding:.8rem}
 }
+/* 通信エラーは消えないパネルで表示（認証情報は表示しない） */
+#connection-error{position:relative;z-index:210;max-width:720px;margin:16px auto;padding:18px;background:#fff5f2;color:#542a22;border:1px solid #d7a69a;border-radius:12px;overflow-wrap:anywhere;font-size:14px}
+#connection-error[hidden]{display:none}
+#connection-error p{margin:8px 0;line-height:1.7}
+#connection-error-code{font-size:12px;color:#78564d}
+#connection-error button{margin:8px 8px 0 0;padding:10px 16px;min-height:44px;border:1px solid #b77867;border-radius:8px;background:#fff;color:#542a22;cursor:pointer}
+#connection-error button:disabled{opacity:.5;cursor:wait}
+#auth-page{flex-direction:column}
+#auth-page #connection-error{width:100%;max-width:440px;margin:0 0 16px}
 </style>
 </head>
 <body>
@@ -353,6 +362,14 @@ body.is-pc .pgrid, body.is-pc .mdr {grid-template-columns:repeat(2,minmax(0,1fr)
     </div>
   </div>
 </div>
+<!-- 通信診断（再試行は利用者が操作した場合のみ） -->
+<section id="connection-error" role="alert" hidden>
+  <strong id="connection-error-title">通信を完了できませんでした</strong>
+  <p id="connection-error-message"></p>
+  <p id="connection-error-code"></p>
+  <button id="connection-retry" type="button" onclick="retryConnection()">もう一度読み込む</button>
+  <button type="button" onclick="hideConnectionError()">閉じる</button>
+</section>
 <!-- AUTH -->
 <div id="auth-page">
   <div class="auth-wrap">
@@ -430,23 +447,142 @@ var GAS_URL = 'https://script.google.com/macros/s/AKfycbwpxEwZB6lVsYeeskx3OwP4VL
 // ============================================================
 //  GAS APIブリッジ（fetch版）
 // ============================================================
+// 待機の上限。自動再送はしない（書込みの重複を避ける）。
+var API_READ_TIMEOUT_MS = 45000;
+var API_WRITE_TIMEOUT_MS = 90000;
+var API_LAST_FAILURE = null;
+var RETRY_AVAILABLE_AT = 0;
+var RETRY_TICK = null;
+
+function apiError(code, action, seconds) {
+  var err = new Error(code);
+  err.code = code;
+  err.action = action;
+  err.seconds = seconds || 0;
+  return err;
+}
 function gas(action) {
   var params = Array.prototype.slice.call(arguments, 1);
-  return fetch(GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ action: action, params: params })
-  }).then(function(res) {
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.json();
+  var isRead = action === 'getCasesWithApplied' || action === 'getMyApplications';
+  var limit = isRead ? API_READ_TIMEOUT_MS : API_WRITE_TIMEOUT_MS;
+  var controller = typeof AbortController === 'function' ? new AbortController() : null;
+  return new Promise(function(resolve, reject) {
+    var settled = false;
+    var timer = setTimeout(function() {
+      if (settled) return;
+      settled = true;
+      if (controller) controller.abort();
+      var err = apiError('REQUEST_TIMEOUT', action, Math.round(limit / 1000));
+      // 中断してもGAS側は続いている可能性があるため即時再送を抑制。
+      RETRY_AVAILABLE_AT = Math.max(RETRY_AVAILABLE_AT, Date.now() + 60000);
+      API_LAST_FAILURE = err;
+      reject(err);
+    }, limit);
+    function settle(err, value) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (err) {
+        API_LAST_FAILURE = err;
+        reject(err);
+      } else {
+        resolve(value);
+      }
+    }
+    var options = {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      body: JSON.stringify({ action: action, params: params }),
+      redirect: 'follow',
+      credentials: 'omit'
+    };
+    if (controller) options.signal = controller.signal;
+    // Promiseで包み、fetchの同期例外も通常のエラー経路へ渡す。
+    Promise.resolve().then(function() {
+      return fetch(GAS_URL, options);
+    }).then(function(res) {
+      if (!res.ok) throw apiError('HTTP_' + res.status, action);
+      // JSON本文の読み取りにも同じ制限時間を適用する。
+      return res.text();
+    }).then(function(body) {
+      var r;
+      try { r = JSON.parse(body); }
+      catch (e) { throw apiError('INVALID_JSON_RESPONSE', action); }
+      if (!r || typeof r !== 'object') throw apiError('INVALID_API_RESPONSE', action);
+      settle(null, r);
+    }).catch(function(err) {
+      if (settled) return;
+      settle(err && err.code ? err : apiError('NETWORK_OR_CORS', action));
+    });
   });
+}
+function connectionMessage(err) {
+  var code = err && err.code || 'CLIENT_RENDER_ERROR';
+  if (code === 'REQUEST_TIMEOUT') return 'サーバーから' + err.seconds + '秒以内に応答がありませんでした。サーバー側の処理は続いている可能性があります。少し時間を置いてから再度お試しください。';
+  if (code === 'NETWORK_OR_CORS') return 'ブラウザからAPIに接続できませんでした。通信状態、GASの公開設定、URL、ブラウザの通信エラーを確認してください。';
+  if (code === 'INVALID_JSON_RESPONSE') return 'APIからJSON以外の応答が返りました。GASのURLと公開設定、Googleへのログインを要求する画面が返っていないか確認してください。';
+  if (code.indexOf('HTTP_') === 0) return 'APIへの接続でHTTPエラーが返りました。時間を置いて再度お試しください。';
+  if (code === 'API_REJECTED' || code === 'INVALID_CASES_RESPONSE' || code === 'INVALID_APPLICATIONS_RESPONSE') return 'サーバーが取得エラーを返したか、応答の形式が想定と異なります。GASの実行ログとデプロイしたバージョンを確認してください。';
+  return '画面の表示処理を完了できませんでした。ブラウザの開発者ツールでエラーを確認してください。';
+}
+function hideConnectionError() {
+  $('connection-error').hidden = true;
+  if (RETRY_TICK) clearTimeout(RETRY_TICK);
+  RETRY_TICK = null;
+}
+function updateRetryButton() {
+  var btn = $('connection-retry');
+  var remain = Math.ceil((RETRY_AVAILABLE_AT - Date.now()) / 1000);
+  btn.disabled = remain > 0 || INITIALIZING;
+  btn.textContent = remain > 0 ? remain + '秒後に再読み込みできます' : 'もう一度読み込む';
+  if (RETRY_TICK) clearTimeout(RETRY_TICK);
+  RETRY_TICK = null;
+  if (remain > 0 && !$('connection-error').hidden) RETRY_TICK = setTimeout(updateRetryButton, 1000);
+}
+function showConnectionError(err, title) {
+  hideLoaderProgress(true);
+  var panel = $('connection-error');
+  // 未認証時にもログインフォームの前に見える位置へ置く。
+  if (!$('auth-page').classList.contains('hidden')) {
+    $('auth-page').insertBefore(panel, $('auth-page').firstChild);
+  } else {
+    $('hdr').insertAdjacentElement('afterend', panel);
+  }
+  $('connection-error-title').textContent = title || '読み込みを完了できませんでした';
+  $('connection-error-message').textContent = connectionMessage(err);
+  // 応答本文や例外メッセージは表示せず、既知の診断コードのみ表示。
+  var allowedCodes = /^(REQUEST_TIMEOUT|NETWORK_OR_CORS|INVALID_JSON_RESPONSE|INVALID_API_RESPONSE|INVALID_CASES_RESPONSE|INVALID_APPLICATIONS_RESPONSE|API_REJECTED|CLIENT_RENDER_ERROR|HTTP_[0-9]{3})$/;
+  var code = err && allowedCodes.test(err.code) ? err.code : 'CLIENT_RENDER_ERROR';
+  var action = err && ['getCasesWithApplied','getMyApplications','loginUser'].indexOf(err.action) >= 0 ? err.action : '画面表示';
+  $('connection-error-code').textContent = '診断コード：' + code + ' ／ 処理：' + action + ' ／ HTML修正版：20261117-HTML-02';
+  panel.hidden = false;
+  updateRetryButton();
+}
+function retryConnection() {
+  if (INITIALIZING || Date.now() < RETRY_AVAILABLE_AT) return;
+  var action = API_LAST_FAILURE && API_LAST_FAILURE.action;
+  hideConnectionError();
+  if (TOKEN && U) {
+    if (action === 'getMyApplications' && $('pg-apps').classList.contains('on')) {
+      loadApps();
+    } else {
+      CASES_LOADED_AT = 0;
+      goPage('cases');
+    }
+  } else {
+    initializeApp();
+  }
 }
 function gasAuth(action) {
   var args = Array.prototype.slice.call(arguments);
+  var requestToken = args[1];
   return gas.apply(null, args).then(function(r) {
     if (r && (r.error === 'SESSION_EXPIRED' || r.message === 'SESSION_EXPIRED')) {
-      handleSessionExpired();
+      if (TOKEN === requestToken) handleSessionExpired();
       return Promise.reject('SESSION_EXPIRED');
+    }
+    if (r && (r.error || r.success === false)) {
+      throw apiError('API_REJECTED', action);
     }
     return r;
   });
@@ -585,6 +721,7 @@ function animateLoaderProgress(now) {
 
 function startLoaderProgress(stage) {
   var p = LOADER_PROGRESS;
+  if (p.finishTimer) { clearTimeout(p.finishTimer); p.finishTimer = null; }
   if (p.hideTimer) { clearTimeout(p.hideTimer); p.hideTimer = null; }
   if (p.frameId !== null) { cancelAnimationFrame(p.frameId); p.frameId = null; }
   p.active = true;
@@ -616,6 +753,7 @@ function setLoaderStage(stage, limit) {
 function hideLoaderProgress(immediate) {
   var p = LOADER_PROGRESS;
   if (p.frameId !== null) { cancelAnimationFrame(p.frameId); p.frameId = null; }
+  if (p.finishTimer) { clearTimeout(p.finishTimer); p.finishTimer = null; }
   if (p.hideTimer) { clearTimeout(p.hideTimer); p.hideTimer = null; }
   p.active = false;
   p.finishing = false;
@@ -645,73 +783,79 @@ function cancelLoaderProgress() {
 function finishLoaderProgress() {
   var p = LOADER_PROGRESS;
   if (!p.active) return Promise.resolve();
-  // 画面描画をブラウザに渡した後で、初めて100%への到達を許可する。
   return new Promise(function(resolve) {
-    requestAnimationFrame(function() {
-      requestAnimationFrame(function() {
-        if (!p.active) { resolve(); return; }
-        $('lb-status').textContent = '読み込み完了';
-        p.finishing = true;
-        p.target = 100;
-        p.onHidden = resolve;
-        if (p.frameId === null) {
-          p.lastFrame = 0;
-          p.frameId = requestAnimationFrame(animateLoaderProgress);
-        }
-      });
-    });
+    p.onHidden = resolve;
+    $('lb-status').textContent = '読み込み完了';
+    p.finishing = true;
+    p.target = 100;
+    if (p.finishTimer) clearTimeout(p.finishTimer);
+    // データ取得・DOM更新は呼出元で完了済み。描画待ちには上限を設ける。
+    p.finishTimer = setTimeout(function() {
+      p.finishTimer = null;
+      if (!p.active || !p.finishing) return;
+      p.displayed = 100;
+      paintLoaderProgress();
+      hideLoaderProgress(true);
+    }, 1200);
+    if (p.frameId === null) {
+      p.lastFrame = 0;
+      p.frameId = requestAnimationFrame(animateLoaderProgress);
+    }
   });
 }
 
 // ============================================================
 //  初期化：自動ログイン時だけ進行バーを表示。未ログインは即表示。
 // ============================================================
+var INITIALIZING = false;
 function initializeApp() {
+  if (INITIALIZING) return Promise.resolve(false);
   var savedToken = null;
   var savedUser = null;
   try {
     savedToken = localStorage.getItem('_pr_token');
     savedUser = JSON.parse(localStorage.getItem('_pr_user') || 'null');
   } catch(e) {}
-
-  if (!savedToken || !savedUser) {
-    hideLoaderProgress(true); // 保存済みログインなし：固定待機なしでログイン画面
-    return;
+  if (!savedToken || !savedUser || typeof savedUser !== 'object') {
+    hideLoaderProgress(true);
+    return Promise.resolve(false);
   }
-
+  INITIALIZING = true;
+  hideConnectionError();
   startLoaderProgress('ログイン状態を確認しています…');
-  // GASのAPIは検証と案件取得を同時に返すため、通信中は1段階として扱う。
-  setLoaderStage('認証・案件データを取得しています…', 87);
-  gas('getCasesWithApplied', savedToken)
-    .then(function(r) {
-      if (r && Array.isArray(r.cases) && Array.isArray(r.applied) && !r.error) {
-        TOKEN = savedToken;
-        U = savedUser;
-        // 取得済み案件データで描画し、再通信しない。
-        enterApp(r);
-        setLoaderStage('案件一覧を表示しています…', 97);
-        return finishLoaderProgress();
-      }
-      if (r && (r.error === 'SESSION_EXPIRED' || r.message === 'SESSION_EXPIRED')) {
-        clearSession();
-      } else {
-        // 一時エラー時には保存済みトークンを維持。
-        showToast('認証の確認に失敗しました。再読み込みしてお試しください。', 'err');
-      }
-      cancelLoaderProgress();
-    })
-    .catch(function() {
-      // 通信障害時はトークンを保持して次回アクセス時に再検証できるようにする。
-      cancelLoaderProgress();
-      showToast('接続できませんでした。通信状態をご確認のうえ再読み込みしてください。', 'err');
+  setLoaderStage('認証・案件データを取得しています…（最大45秒）', 87);
+  return gas('getCasesWithApplied', savedToken).then(function(r) {
+    if (r && (r.error === 'SESSION_EXPIRED' || r.message === 'SESSION_EXPIRED')) {
+      clearSession();
+      hideLoaderProgress(true);
+      showErr('login', 'ログインの有効期限が切れました。再ログインしてください。');
+      return false;
+    }
+    if (!r || r.error || r.success === false || !Array.isArray(r.cases) || !Array.isArray(r.applied)) {
+      throw apiError('INVALID_CASES_RESPONSE', 'getCasesWithApplied');
+    }
+    TOKEN = savedToken;
+    U = savedUser;
+    // 描画の成否までPromiseチェーンで待つ。
+    return Promise.resolve().then(function() {
+      return enterApp(r);
+    }).then(function(loaded) {
+      if (!loaded) throw apiError('CLIENT_RENDER_ERROR', 'getCasesWithApplied');
+      setLoaderStage('案件一覧を表示しています…', 97);
+      return finishLoaderProgress().then(function() { return true; });
     });
+  }).catch(function(err) {
+    API_LAST_FAILURE = err;
+    // 通信失敗では保存済みのログイン情報を消さない。
+    showConnectionError(err, '自動ログインの読み込みを完了できませんでした');
+    return false;
+  }).finally(function() {
+    INITIALIZING = false;
+    updateRetryButton();
+  });
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeApp, {once:true});
-} else {
-  initializeApp();
-}
+// 初期化の呼び出しは、全変数の準備が終わるscript末尾へ移動。
 
 // ============================================================
 //  AUTH
@@ -757,6 +901,8 @@ function doResetPassword() {
   });
 }
 function doLogin() {
+  if ($('btn-login').disabled || INITIALIZING) return;
+  hideConnectionError();
   var email = gv('l-email'), pass = $('l-pass').value;
   if (!email || !pass)   { showErr('login','メールとパスワードを入力してください'); return; }
   if (!cEmail(email))    { showErr('login','メールアドレスの形式が正しくありません'); return; }
@@ -767,7 +913,7 @@ function doLogin() {
   // 30日保持設定は既存どおりGASに送信する。
   gas('loginUser', cSan(email,254), pass, $('l-keep').checked).then(function(r) {
     if (!r || !r.success) {
-      cancelLoaderProgress();
+      hideLoaderProgress(true);
       showErr('login', (r && r.message) || 'ログイン情報が正しくありません');
       return;
     }
@@ -780,9 +926,10 @@ function doLogin() {
       return finishLoaderProgress();
     });
   }).catch(function(err) {
-    cancelLoaderProgress();
+    hideLoaderProgress(true);
     if (err !== 'SESSION_EXPIRED') {
-      showErr('login', 'エラーが発生しました。GAS URLの設定を確認してください。');
+      API_LAST_FAILURE = err;
+      showConnectionError(err, 'ログイン処理を完了できませんでした');
     }
   }).finally(function() {
     dis('btn-login', false, 'ログイン');
@@ -943,8 +1090,8 @@ function loadCases(prefetchedCases) {
   var requestResult = pending.then(function(r) {
     // 古いログイン状態から返った結果は画面に反映しない。
     if (TOKEN !== requestToken) return false;
-    if (!r || !Array.isArray(r.cases) || !Array.isArray(r.applied)) {
-      throw new Error('INVALID_CASES_RESPONSE');
+    if (!r || r.error || r.success === false || !Array.isArray(r.cases) || !Array.isArray(r.applied)) {
+      throw apiError('INVALID_CASES_RESPONSE', 'getCasesWithApplied');
     }
     CASES = r.cases;
     APPLIED = r.applied;
@@ -953,10 +1100,12 @@ function loadCases(prefetchedCases) {
     return true;
   }).catch(function(err) {
     if (err === 'SESSION_EXPIRED' || TOKEN !== requestToken) return false;
+    API_LAST_FAILURE = err;
+    showConnectionError(err, '案件一覧を取得できませんでした');
     if (CASES_LOADED_AT) {
       showToast('案件一覧を更新できませんでした。しばらくして再度お試しください。', 'err');
     } else if ($('pg-cases').classList.contains('on')) {
-      $('cgrid').innerHTML = emptyHTML('⚠️','読み込みエラー','ページを再読み込みしてください');
+      $('cgrid').innerHTML = emptyHTML('⚠️','案件を取得できませんでした','画面上部の通信エラーをご確認ください');
     }
     return false;
   }).finally(function() {
@@ -988,7 +1137,7 @@ function render() {
 }
 function setF(f, el) {
   FILTER = f;
-  document.querySelectorAll('.ftag').forEach(function(b){ b.classList.remove('on'); });
+  document.querySelectorAll('#pg-cases .ftag').forEach(function(b){ b.classList.remove('on'); });
   el.classList.add('on');
   render();
 }
@@ -1286,9 +1435,12 @@ function loadApps() {
   APP_FILTER = 'all';
   document.querySelectorAll('#pg-apps .ftag').forEach(function(b){ b.classList.remove('on'); });
   var af = $('af-all'); if(af) af.classList.add('on');
-  gasAuth('getMyApplications', TOKEN)
+  var requestToken = TOKEN;
+  return gasAuth('getMyApplications', requestToken)
   .then(function(apps) {
-    if (!apps||!apps.length) {
+    if (TOKEN !== requestToken) return;
+    if (!Array.isArray(apps)) throw apiError('INVALID_APPLICATIONS_RESPONSE', 'getMyApplications');
+    if (!apps.length) {
       ALL_APPS = [];
       $('alist').innerHTML = emptyHTML('📋','まだ応募はありません','案件一覧から気になる案件に応募してみましょう！');
       return;
@@ -1306,8 +1458,10 @@ function loadApps() {
     ALL_APPS = approvedApps.concat(pendingApps).concat(rejectedApps).concat(visitedApps);
     renderApps();
   }).catch(function(err) {
-    if (err === 'SESSION_EXPIRED') return;
-    $('alist').innerHTML = emptyHTML('⚠️','読み込みエラー','');
+    if (err === 'SESSION_EXPIRED' || TOKEN !== requestToken) return;
+    API_LAST_FAILURE = err;
+    showConnectionError(err, '応募一覧を取得できませんでした');
+    $('alist').innerHTML = emptyHTML('⚠️','読み込みエラー','画面上部の通信エラーをご確認ください');
   });
 }
 function fmtDate(date) {
@@ -1665,6 +1819,12 @@ document.addEventListener('keydown', function(e) {
   var id=document.activeElement&&document.activeElement.id;
   if (id==='l-email'||id==='l-pass') doLogin();
 });
+// すべての状態変数・関数を準備してから起動。
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeApp, {once:true});
+} else {
+  initializeApp();
+}
 </script>
 </body>
 </html>
